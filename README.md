@@ -1,2 +1,255 @@
-# veeam-single-ui
-An opensource, community driven single ui across all Veeam solutions
+# VBR Connect MVP
+
+A Next.js 15 application providing a unified monitoring dashboard for Veeam Data Protection products through an intuitive web interface.
+
+## Features
+
+### Veeam Backup & Replication (VBR)
+
+#### Dashboard View
+- **Real-time Statistics**: Active jobs, success rate, storage usage, protected VMs, and data processed
+- **Security Best Practices**: Monitoring of security configuration compliance
+- **Malware Detection**: Recent malware scan events and alerts
+- **Recent Sessions**: Overview of the latest backup sessions with status and details
+- **Time Range Selection**: 7-day and 30-day views for historical analysis
+
+#### Jobs Management
+- **Comprehensive Jobs Table**: All backup jobs with status, type, and schedule information
+- **Advanced Filtering**: Filter by job status (Running, Success, Warning, Failed)
+- **Job Details**: Click any job to view detailed session history
+- **Search Capability**: Quick search across all job names
+- **Last/Next Run Tracking**: See when jobs last ran and when they'll run next
+
+#### Job Details View
+- **Session History**: Complete history of all job executions
+- **Task-Level Breakdown**: Detailed task information for each session
+- **Transfer Rates**: Visual representation of backup transfer rates over time
+- **Session Status**: Success, Warning, Failed, and Running session tracking
+- **Time-based Filtering**: Filter sessions by time range
+
+#### Managed Servers
+- **Infrastructure Overview**: View all managed backup infrastructure servers
+- **Server Details**: Name, type, description, and version information
+- **Server Types**: Backup servers, proxies, repositories, and more
+
+### Veeam Recovery Orchestrator (VRO)
+- **Recovery Plans Table**: Overview of all orchestration plans
+- **Plan Status**: Monitor plan state and configuration
+- **Plan Details**: Name, description, and VM counts
+- **Search and Filter**: Quick access to specific recovery plans
+
+### Veeam Backup for Microsoft 365 (VBM)
+- **Microsoft 365 Jobs**: Monitor all M365 backup jobs
+- **Job Status Tracking**: Success, warning, and failure states
+- **Last Run Information**: Track when M365 jobs last executed
+- **Job Type Support**: Multiple M365 job types and configurations
+
+### Kasten K10
+- **Coming Soon**: Kubernetes backup platform monitoring
+
+### General Features
+- **Real-time Updates**: Automatic 30-second data refresh across all views
+- **Unified Global Search**: Search across all backup jobs and recovery plans from any page
+- **Theme Support**: Dark/Light mode with automatic system preference detection
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+- **Secure API Proxy**: Server-side API calls protect credentials from client exposure
+- **Interactive Visualizations**: Charts and graphs using Recharts library
+- **Data Tables**: Sortable, filterable tables with TanStack Table
+- **Toast Notifications**: User-friendly error and success messages
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20.x or later
+- npm, yarn, pnpm, or bun package manager
+- Access to at least one Veeam product REST API:
+  - Veeam Backup & Replication REST API (v1.3-rev1) - **Required**
+  - Veeam Recovery Orchestrator REST API (v7.21) - Optional
+  - Veeam Backup for Microsoft 365 REST API (v8) - Optional
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+# Veeam Backup & Replication (Required)
+VEEAM_API_URL=https://your-vbr-server:9419
+VEEAM_USERNAME=your-username
+VEEAM_PASSWORD=your-password
+
+# Veeam Recovery Orchestrator (Optional)
+VRO_API_URL=https://your-vro-server:9898
+VRO_USERNAME=your-vro-username
+VRO_PASSWORD=your-vro-password
+
+# Veeam Backup for Microsoft 365 (Optional)
+VBM_API_URL=https://your-vbm-server:4443
+VBM_USERNAME=your-vbm-username
+VBM_PASSWORD=your-vbm-password
+
+# Allow self-signed certificates (development only)
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+**Note**: VBR configuration is required. VRO and VBM are optional - their respective pages will display an error message if not configured.
+
+### Development
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Run the development server:
+
+```bash
+npm run dev
+```
+
+The application uses Next.js 15 with Turbopack for fast development builds.
+
+3. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+
+### Production Build
+
+```bash
+npm run build
+npm start
+```
+
+## Container Deployment
+
+See [CONTAINER.md](./CONTAINER.md) for detailed instructions on building and running this application as a container.
+
+## API Integration
+
+### Veeam Backup & Replication
+- **API Version**: v1.3-rev1
+- **Default Port**: 9419
+- **Authentication**: Basic Auth with session tokens
+- **Documentation**: [VBR REST API Reference](https://helpcenter.veeam.com/docs/backup/vbr_rest/reference/vbr-rest-v1-3-rev1.html)
+- **Endpoints Used**:
+  - `/api/v1/backupInfrastructure/jobs` - Backup jobs list
+  - `/api/v1/backupInfrastructure/jobs/{id}/sessions` - Job sessions
+  - `/api/v1/backupInfrastructure/backupServers` - Managed servers
+  - `/api/v1/backupInfrastructure/backupServers/{id}/backupRepositories` - Repositories
+  - `/api/v1/license` - License information
+  - `/api/v1/malware-detection/events` - Malware events
+  - `/api/v1/security/bestPractices` - Security best practices
+
+### Veeam Recovery Orchestrator
+- **API Version**: v7.21
+- **Default Port**: 9898
+- **Authentication**: Basic Auth
+- **Documentation**: [VRO REST API Reference](https://helpcenter.veeam.com/references/vro/7.2/rest/7.2.1/)
+- **Endpoints Used**:
+  - `/api/v7.2/Plans` - Recovery orchestration plans
+
+### Veeam Backup for Microsoft 365
+- **API Version**: v8
+- **Default Port**: 4443
+- **Authentication**: Basic Auth
+- **Documentation**: [VBM REST API Reference](https://helpcenter.veeam.com/docs/vbo365/rest/reference/vbo-rest-v8.html)
+- **Endpoints Used**:
+  - `/v8/Jobs` - Microsoft 365 backup jobs
+
+## Project Structure
+
+```
+├── app/
+│   ├── api/                          # API routes (secure proxy to Veeam APIs)
+│   │   ├── veeam/                    # VBR API routes
+│   │   │   ├── auth/                 # VBR authentication
+│   │   │   ├── jobs/                 # Backup jobs endpoint
+│   │   │   ├── sessions/             # Job sessions endpoint
+│   │   │   ├── backupInfrastructure/ # Infrastructure endpoints
+│   │   │   ├── license/              # License information
+│   │   │   ├── malware-detection/    # Malware events
+│   │   │   └── security/             # Security best practices
+│   │   ├── vro/                      # VRO API routes
+│   │   │   ├── auth/                 # VRO authentication
+│   │   │   └── plans/                # Recovery plans endpoint
+│   │   └── vbm/                      # VBM API routes
+│   │       ├── auth/                 # VBM authentication
+│   │       └── jobs/                 # Microsoft 365 jobs endpoint
+│   ├── vbr/                          # VBR monitoring pages
+│   │   ├── page.tsx                  # VBR jobs overview
+│   │   ├── dashboard/                # VBR dashboard with stats
+│   │   ├── jobs/                     # Jobs list and details
+│   │   │   ├── page.tsx              # All jobs view
+│   │   │   └── [id]/                 # Individual job details
+│   │   └── managed-servers/          # Managed servers view
+│   ├── vro/                          # VRO monitoring page
+│   ├── vbm/                          # VBM monitoring page
+│   ├── k10/                          # K10 placeholder page
+│   ├── layout.tsx                    # Root layout with sidebar
+│   └── page.tsx                      # Home (redirects to /vbr/dashboard)
+├── components/
+│   ├── ui/                           # shadcn/ui components (20+ components)
+│   ├── app-header.tsx                # Application header with search
+│   ├── app-sidebar.tsx               # Navigation sidebar
+│   ├── backup-jobs-table.tsx         # VBR jobs table
+│   ├── dashboard-stats.tsx           # Dashboard statistics cards
+│   ├── security-widget.tsx           # Security and malware monitoring
+│   ├── sessions-overview.tsx         # Recent sessions widget
+│   ├── session-tasks-table.tsx       # Session tasks breakdown
+│   ├── job-details-header.tsx        # Job details header component
+│   ├── managed-servers-table.tsx     # Managed servers table
+│   ├── recovery-plans-table.tsx      # VRO plans table
+│   ├── vbm-jobs-table.tsx            # VBM jobs table
+│   ├── transfer-rate-chart.tsx       # Transfer rate visualization
+│   ├── data-table-faceted-filter.tsx # Advanced table filtering
+│   ├── search-provider.tsx           # Global search context
+│   ├── theme-provider.tsx            # Dark/Light theme provider
+│   └── mode-toggle.tsx               # Theme toggle button
+├── lib/
+│   ├── api/
+│   │   └── veeam-client.ts           # API client utilities
+│   ├── types/
+│   │   ├── veeam.ts                  # VBR TypeScript types (comprehensive)
+│   │   └── vbm.ts                    # VBM TypeScript types
+│   └── utils/
+│       ├── utils.ts                  # General utilities (cn, formatters)
+│       ├── transfer-rate.ts          # Transfer rate calculations
+│       └── rate-limiter.ts           # API rate limiting
+├── hooks/
+│   └── use-mobile.ts                 # Mobile detection hook
+└── public/
+    ├── favicon.ico                   # Application favicon
+    └── logo.webp                     # Application logo
+```
+
+## Technology Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/docs) with App Router and Turbopack
+- **Language**: [TypeScript 5](https://www.typescriptlang.org/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) built on [Radix UI](https://www.radix-ui.com/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Charts**: [Recharts](https://recharts.org/)
+- **Data Tables**: [TanStack Table](https://tanstack.com/table/latest)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Theme**: [next-themes](https://github.com/pacocoursey/next-themes)
+
+## Documentation
+
+### Veeam Product Documentation
+- [Veeam Backup & Replication REST API](https://helpcenter.veeam.com/docs/backup/vbr_rest/)
+- [Veeam Recovery Orchestrator REST API](https://helpcenter.veeam.com/references/vro/)
+- [Veeam Backup for Microsoft 365 REST API](https://helpcenter.veeam.com/docs/vbo365/rest/)
+
+### Application Documentation
+- [Container Deployment Guide](./CONTAINER.md)
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Solutions for common issues including 403 errors
+- [Root README](../README.md)
+
+## Contributing
+
+This project was developed as part of the Veeam Community Hackathon 2025.
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) and [DCO.md](../DCO.md) for contribution guidelines.
+
+## License
+
+See [LICENSE](../LICENSE) file for details.
