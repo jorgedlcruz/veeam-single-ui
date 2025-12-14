@@ -6,26 +6,12 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { BackupJobsTable } from "@/components/backup-jobs-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VeeamBackupJob } from "@/lib/types/veeam"
-import { useSearch } from "@/components/search-provider"
 
 export default function VBRJobsPage() {
     const [jobs, setJobs] = useState<VeeamBackupJob[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { searchQuery } = useSearch()
-
-    // Filter jobs based on search query
-    const filteredJobs = useMemo(() => {
-        if (!searchQuery.trim()) return jobs
-
-        const query = searchQuery.toLowerCase()
-        return jobs.filter(job =>
-            job.name?.toLowerCase().includes(query) ||
-            job.type?.toLowerCase().includes(query) ||
-            job.description?.toLowerCase().includes(query) ||
-            job.lastResult?.toLowerCase().includes(query)
-        )
-    }, [jobs, searchQuery])
+    // const { searchQuery } = useSearch()
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -69,7 +55,7 @@ export default function VBRJobsPage() {
                 )}
 
                 <BackupJobsTable
-                    data={filteredJobs}
+                    data={jobs}
                     loading={loading}
                     onRefresh={fetchJobs}
                 />

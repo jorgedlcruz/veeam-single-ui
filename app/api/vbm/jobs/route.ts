@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Get authorization header from the request
     const authHeader = request.headers.get('authorization');
-    
+
     if (!authHeader) {
       return NextResponse.json(
         { error: 'Authorization header required' },
@@ -27,11 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Extract query parameters (offset, limit, etc.)
     const { searchParams } = new URL(request.url);
-    const offset = searchParams.get('offset') || '0';
-    const limit = searchParams.get('limit') || '30';
-    
-    const params = new URLSearchParams({ offset, limit });
-    const endpoint = `/v8/Jobs?${params.toString()}`;
+    const endpoint = `/v8/Jobs?${searchParams.toString()}`;
     const fullUrl = `${VBM_API_URL}${endpoint}`;
 
     console.log('[VBM JOBS] Fetching from:', fullUrl);
@@ -54,9 +50,9 @@ export async function GET(request: NextRequest) {
     }
 
     const data: VBMJobsResponse = await response.json();
-    
+
     console.log(`[VBM JOBS] Retrieved ${data.results?.length || 0} jobs`);
-    
+
     return NextResponse.json(data);
 
   } catch (error) {

@@ -6,27 +6,12 @@ import { useState, useEffect, useMemo } from "react"
 import { RecoveryPlansTable } from "@/components/recovery-plans-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VRORecoveryPlan } from "@/lib/types/veeam"
-import { useSearch } from "@/components/search-provider"
 
 export default function VROPage() {
   const [plans, setPlans] = useState<VRORecoveryPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { searchQuery } = useSearch()
-
-  // Filter plans based on search query
-  const filteredPlans = useMemo(() => {
-    if (!searchQuery.trim()) return plans
-
-    const query = searchQuery.toLowerCase()
-    return plans.filter(plan => 
-      plan.name?.toLowerCase().includes(query) ||
-      plan.planType?.toLowerCase().includes(query) ||
-      plan.description?.toLowerCase().includes(query) ||
-      plan.stateName?.toLowerCase().includes(query) ||
-      plan.resultName?.toLowerCase().includes(query)
-    )
-  }, [plans, searchQuery])
+  // const { searchQuery } = useSearch() // Global search removed
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -44,7 +29,7 @@ export default function VROPage() {
     }
 
     fetchPlans()
-    
+
     // Refresh data every 30 seconds
     const interval = setInterval(fetchPlans, 30000)
     return () => clearInterval(interval)
@@ -69,7 +54,7 @@ export default function VROPage() {
           </div>
         )}
 
-        <RecoveryPlansTable data={filteredPlans} loading={loading} />
+        <RecoveryPlansTable data={plans} loading={loading} />
       </div>
     </div>
   )

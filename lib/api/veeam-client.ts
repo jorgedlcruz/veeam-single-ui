@@ -515,6 +515,142 @@ class VeeamApiClient {
 
 
 
+
+  // Cache for global search
+  private searchInventory: any[] = [];
+  private inventoryLastUpdated: number = 0;
+  private readonly INVENTORY_TTL = 30 * 60 * 1000; // 30 minutes
+
+  private async ensureInventory(): Promise<void> {
+    const now = Date.now();
+    if (this.searchInventory.length > 0 && (now - this.inventoryLastUpdated < this.INVENTORY_TTL)) {
+      return;
+    }
+
+    try {
+      // Fetch everything without filters
+      const [
+        vbrJobsRes,
+        vbrObjectsRes,
+        vbmJobsRes,
+        vbmUsersRes,
+        vbmGroupsRes,
+        vbmSitesRes,
+        vbmTeamsRes
+      ] = await Promise.allSettled([
+
+        this.getBackupJobs({}), // No filter
+        this.getProtectedData(),
+        this.requestVBM<any>('/jobs?limit=5000'),
+        this.requestVBM<any>('/ProtectedUsers?limit=5000'),
+        this.requestVBM<any>('/ProtectedGroups?limit=5000'),
+        this.requestVBM<any>('/ProtectedSites?limit=5000'),
+        this.requestVBM<any>('/ProtectedTeams?limit=5000')
+      ]);
+
+      const newInventory: any[] = [];
+
+      // Process VBR Jobs
+      if (vbrJobsRes.status === 'fulfilled') {
+        vbrJobsRes.value.forEach(job => {
+          newInventory.push({
+            id: job.id,
+            name: job.name,
+            type: 'VBR Job',
+            url: `/vbr/jobs/${job.id}`,
+            description: job.type,
+            searchStr: (job.name || '').toLowerCase()
+          });
+        });
+      }
+
+      // Process VBR Workloads
+      if (vbrObjectsRes.status === 'fulfilled') {
+        vbrObjectsRes.value.forEach(obj => {
+          newInventory.push({
+            id: obj.id,
+            name: obj.name,
+            type: 'VBR Workload',
+            url: `/vbr/protected-data/restore-points?objectId=${obj.id}&name=${encodeURIComponent(obj.name)}`,
+            description: obj.platformName,
+            searchStr: (obj.name || '').toLowerCase()
+          });
+        });
+      }
+
+      // Process VBM Jobs
+      if (vbmJobsRes.status === 'fulfilled') {
+        const jobs = vbmJobsRes.value.results || [];
+        jobs.forEach((job: any) => {
+          newInventory.push({
+            id: job.id,
+            name: job.name,
+            type: 'VB365 Job',
+            url: `/vb365/jobs/${job.id}/sessions`,
+            description: job.description,
+            searchStr: (job.name || '').toLowerCase()
+          });
+        });
+      }
+
+      // Helper for VBM Items
+      const processVbmItems = (res: PromiseSettledResult<any>, type: string) => {
+        if (res.status === 'fulfilled') {
+          const items = res.value.results || [];
+          items.forEach((item: any) => {
+            const displayName = item.displayName || item.name || item.url || '';
+            const searchTerms = [
+              displayName,
+              item.email,
+              item.description
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            newInventory.push({
+              id: item.id,
+              name: displayName,
+              type: 'VB365 Item',
+              url: `/vbm/protected-items/restore-points?type=${type}&id=${item.id}&name=${encodeURIComponent(displayName)}`,
+              description: `${type} • ${item.email || item.description || ''}`,
+              searchStr: searchTerms
+            });
+          });
+        }
+      };
+
+      processVbmItems(vbmUsersRes, 'User');
+      processVbmItems(vbmGroupsRes, 'Group');
+      processVbmItems(vbmSitesRes, 'Site');
+      processVbmItems(vbmTeamsRes, 'Team');
+
+      this.searchInventory = newInventory;
+      this.inventoryLastUpdated = now;
+
+    } catch (error) {
+      console.error('Error building search inventory:', error);
+      // Keep old inventory if update fails
+    }
+  }
+
+  async globalSearch(query: string): Promise<any[]> {
+    if (!query || query.length < 2) return [];
+
+    // Ensure we have data
+    await this.ensureInventory();
+
+    const lowerQuery = query.toLowerCase();
+
+    // Perform filtering in memory
+    const results = this.searchInventory.filter(item =>
+      item.searchStr.includes(lowerQuery)
+    );
+
+    // Sort by name
+    results.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Limit results
+    return results.slice(0, 20);
+  }
+
   // ============================================
   // Veeam Recovery Orchestrator (VRO) Methods
   // ============================================

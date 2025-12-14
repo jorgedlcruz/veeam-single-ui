@@ -7,7 +7,6 @@ import { BackupJobsTable } from "@/components/backup-jobs-table"
 import { TransferRateChart } from "@/components/transfer-rate-chart"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VeeamBackupJob, TransferRateDataPoint } from "@/lib/types/veeam"
-import { useSearch } from "@/components/search-provider"
 import { calculateTransferRates } from "@/lib/utils/transfer-rate"
 
 export default function VBRPage() {
@@ -15,49 +14,36 @@ export default function VBRPage() {
   const [transferRateData, setTransferRateData] = useState<TransferRateDataPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { searchQuery } = useSearch()
-
-  // Filter jobs based on search query
-  const filteredJobs = useMemo(() => {
-    if (!searchQuery.trim()) return jobs
-
-    const query = searchQuery.toLowerCase()
-    return jobs.filter(job => 
-      job.name?.toLowerCase().includes(query) ||
-      job.type?.toLowerCase().includes(query) ||
-      job.description?.toLowerCase().includes(query) ||
-      job.lastResult?.toLowerCase().includes(query)
-    )
-  }, [jobs, searchQuery])
+  // const { searchQuery } = useSearch() // Global search removed
 
   useEffect(() => {
     const fetchJobs = async () => {
       try {
         setLoading(true)
         setError(null)
-        
+
         // Fetch both jobs and sessions
         const [jobsData, sessionsData] = await Promise.all([
           veeamApi.getBackupJobs(),
           veeamApi.getSessions({ limit: 500, orderColumn: 'CreationTime', orderAsc: false })
         ])
-        
+
         // Enrich jobs with session data
         const enrichedJobs = jobsData.map(job => {
           // Find the most recent completed session for this job
-          const lastCompletedSession = sessionsData.find(s => 
+          const lastCompletedSession = sessionsData.find(s =>
             s.jobId === job.id && s.state === 'Stopped' && s.endTime
           )
-          
+
           return {
             ...job,
             lastResult: lastCompletedSession?.result?.result,
             lastRun: lastCompletedSession?.endTime,
           }
         })
-        
+
         setJobs(enrichedJobs)
-        
+
         // Calculate transfer rate data from sessions
         const transferData = calculateTransferRates(sessionsData)
         setTransferRateData(transferData)
@@ -70,7 +56,7 @@ export default function VBRPage() {
     }
 
     fetchJobs()
-    
+
     // Refresh data every 30 seconds
     const interval = setInterval(fetchJobs, 30000)
     return () => clearInterval(interval)
@@ -100,7 +86,7 @@ export default function VBRPage() {
           <TransferRateChart data={transferRateData} loading={loading} />
         </div>
 
-        <BackupJobsTable data={filteredJobs} loading={loading} />
+        <BackupJobsTable data={jobs} loading={loading} />
       </div>
     </div>
   )

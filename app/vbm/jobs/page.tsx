@@ -6,26 +6,13 @@ import { useState, useEffect, useMemo } from "react"
 import { VBMJobsTable } from "@/components/vbm-jobs-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VBMJob } from "@/lib/types/vbm"
-import { useSearch } from "@/components/search-provider"
 
 export default function VBMJobsPage() {
     const [jobs, setJobs] = useState<VBMJob[]>([])
     const [orgLookup, setOrgLookup] = useState<Record<string, string>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { searchQuery } = useSearch()
-
-    // Filter jobs based on search query
-    const filteredJobs = useMemo(() => {
-        if (!searchQuery.trim()) return jobs
-
-        const query = searchQuery.toLowerCase()
-        return jobs.filter(job =>
-            job.name?.toLowerCase().includes(query) ||
-            job.description?.toLowerCase().includes(query) ||
-            job.lastStatus?.toLowerCase().includes(query)
-        )
-    }, [jobs, searchQuery])
+    // const { searchQuery } = useSearch() // Global search removed
 
     const fetchJobs = async () => {
         try {
@@ -72,7 +59,7 @@ export default function VBMJobsPage() {
                         </div>
                     )}
 
-                    <VBMJobsTable data={filteredJobs} loading={loading} onRefresh={fetchJobs} orgLookup={orgLookup} />
+                    <VBMJobsTable data={jobs} loading={loading} onRefresh={fetchJobs} orgLookup={orgLookup} />
                 </div>
             </div>
         </div>

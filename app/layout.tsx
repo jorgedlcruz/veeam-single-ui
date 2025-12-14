@@ -4,7 +4,6 @@ import "./globals.css";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
-import { SearchProvider } from "@/components/search-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -39,16 +38,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SearchProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <AppHeader />
-                {children}
-              </SidebarInset>
-            </SidebarProvider>
-            <Toaster />
-          </SearchProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <AppHeader />
+              {children}
+            </SidebarInset>
+          </SidebarProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
