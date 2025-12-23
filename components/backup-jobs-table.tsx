@@ -117,7 +117,12 @@ export function BackupJobsTable({ data, loading = false, onRefresh }: BackupJobs
           <Link href={`/vbr/jobs/${row.original.id}`} className="font-medium hover:underline text-primary">
             {row.getValue("name")}
           </Link>
-          <span className="text-xs text-muted-foreground">{row.original.description}</span>
+          <span
+            className="text-xs text-muted-foreground truncate max-w-[300px]"
+            title={row.original.description}
+          >
+            {row.original.description}
+          </span>
         </div>
       ),
     },

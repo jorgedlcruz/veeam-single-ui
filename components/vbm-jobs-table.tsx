@@ -115,7 +115,12 @@ export function VBMJobsTable({ data, loading = false, onRefresh, orgLookup = {} 
           <Link href={`/vb365/jobs/${row.original.id}/sessions`} className="font-medium hover:underline text-primary">
             {row.getValue("name")}
           </Link>
-          <span className="text-xs text-muted-foreground">{row.original.description}</span>
+          <span
+            className="text-xs text-muted-foreground truncate max-w-[300px]"
+            title={row.original.description}
+          >
+            {row.original.description}
+          </span>
         </div>
       ),
     },
