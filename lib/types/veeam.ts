@@ -471,3 +471,129 @@ export interface PlansResult {
   data: VRORecoveryPlan[];
   total: number;
 }
+
+// ============================================
+// Protection Group Types
+// ============================================
+
+export interface VeeamProtectionGroup {
+  id: string;
+  name: string;
+  description: string;
+  type: string; // "ManuallyAdded", "ADObjects", etc.
+  isDisabled: boolean;
+  options?: Record<string, unknown>; // Simplify for now, can be typed strictly if needed
+}
+
+export interface ProtectionGroupsResult {
+  data: VeeamProtectionGroup[];
+  pagination: PaginationResult;
+}
+
+export interface VeeamDiscoveredEntity {
+  id: string;
+  name: string;
+  type: string; // "Computer"
+  isTrusted: boolean;
+  parentId?: string;
+  protectionGroupId: string;
+  state?: string; // "Online"
+  agentStatus?: string; // "Installed"
+  driverStatus?: string; // "NotInstalled"
+  operatingSystem?: string;
+  operatingSystemPlatform?: string; // "X64"
+  agentVersion?: string;
+  rebootRequired?: boolean;
+  ipAddresses?: string[];
+  lastConnected?: string;
+  operatingSystemVersion?: string;
+  operatingSystemUpdateVersion?: number;
+  objectId?: string;
+  biosUuid?: string;
+  plugins?: Array<{ type: string; status: string }>;
+}
+
+export interface DiscoveredEntitiesResult {
+  data: VeeamDiscoveredEntity[];
+  pagination: PaginationResult;
+}
+
+// ============================================
+// Unstructured Data Types
+// ============================================
+
+export interface VeeamUnstructuredServer {
+  id: string;
+  name: string;
+  description: string;
+  type: string; // "SMBShare", "NFSShare", "FileServer"
+  path?: string;
+  hostId?: string;
+  accessCredentialsRequired?: boolean;
+  accessCredentialsId?: string;
+  processing?: {
+    cacheRepositoryId?: string;
+    backupIOControlLevel?: string;
+  };
+  // Enriched fields
+  credentialsName?: string;
+  credentialsDescription?: string;
+  credentialsUserName?: string;
+  credentialsCreationTime?: string;
+  repositoryName?: string;
+  repositoryDescription?: string;
+}
+
+export interface UnstructuredServersResult {
+  data: VeeamUnstructuredServer[];
+  pagination: PaginationResult;
+}
+
+export interface VeeamCredential {
+  id: string;
+  uniqueId: string;
+  type: string;
+  username: string;
+  description: string;
+  creationTime: string;
+}
+
+// Extended Repository Model for details
+export interface VeeamRepositoryDetailed extends RepositoryModel {
+  hostId?: string;
+  path?: string;
+}
+
+// ============================================
+// Virtual Infrastructure Inventory Types
+// ============================================
+
+export interface VeeamInventoryItem {
+  type: string; // 'VirtualMachine' | 'Host' | 'Datacenter' | 'Cluster' | 'vCenterServer' | 'ResourcePool'
+  hostName: string;
+  name: string;
+  objectId: string;
+  urn: string;
+  platform: string;
+  size?: string; // string format like "4.3 TB"
+  isEnabled?: boolean;
+  metadata?: Array<{ field: string; data: string }>;
+}
+
+export interface InventoryResult {
+  data: VeeamInventoryItem[];
+  pagination: PaginationResult;
+}
+
+export interface InventoryFilter {
+  filter?: {
+    type?: string;
+    operation?: string;
+    items?: Array<unknown>;
+  };
+  sorting?: {
+    property: string;
+    direction: 'ascending' | 'descending';
+  };
+}
+

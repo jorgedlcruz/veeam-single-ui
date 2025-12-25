@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Mail } from "lucide-react"
+import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Mail, Database } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 
 // VBR Group with subpages
@@ -34,6 +37,28 @@ const vbrItems = [
     title: "Jobs & Policies",
     href: "/vbr/jobs",
     icon: Briefcase,
+  },
+  {
+    title: "Inventory",
+    icon: Database,
+    items: [
+      {
+        title: "Virtual Infrastructure",
+        href: "/vbr/inventory/virtual",
+      },
+      {
+        title: "Physical and Cloud Infrastructure",
+        href: "/vbr/inventory/protection-groups",
+      },
+      {
+        title: "Unstructured Data",
+        href: "/vbr/inventory/unstructured",
+      },
+      {
+        title: "Microsoft Entra ID",
+        href: "/vbr/inventory/entra",
+      },
+    ]
   },
   {
     title: "Managed Servers",
@@ -110,6 +135,7 @@ export function AppSidebar() {
   const [vroOpen, setVroOpen] = React.useState(true)
   const [k10Open, setK10Open] = React.useState(true)
   const [documentationOpen, setDocumentationOpen] = React.useState(false)
+  const [inventoryOpen, setInventoryOpen] = React.useState(true)
 
   return (
     <Sidebar collapsible="icon">
@@ -145,13 +171,40 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {vbrItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                      <Link href={item.href}>
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
+                  <SidebarMenuItem key={item.title}>
+                    {item.items ? (
+                      <>
+                        <SidebarMenuButton
+                          onClick={() => setInventoryOpen(!inventoryOpen)}
+                          isActive={item.items.some(sub => pathname === sub.href)}
+                          tooltip={item.title}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                          <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${inventoryOpen ? 'rotate-0' : '-rotate-90'}`} />
+                        </SidebarMenuButton>
+                        {inventoryOpen && (
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                  <Link href={subItem.href}>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        )}
+                      </>
+                    ) : (
+                      <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                        <Link href={item.href!}>
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -273,12 +326,14 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {documentationItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild>
-                      <a href={item.href} target="_blank" rel="noopener noreferrer">
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuSubItem key={item.title}>
+                      <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                        <a href={item.href}>
+                          {item.title}
+                        </a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

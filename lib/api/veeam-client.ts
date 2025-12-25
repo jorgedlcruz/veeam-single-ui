@@ -24,7 +24,20 @@ import {
   VeeamBackupFile,
   BackupsResult,
   VeeamProtectedWorkload,
-  VeeamRestorePoint
+  VeeamRestorePoint,
+  VeeamProtectionGroup,
+  ProtectionGroupsResult,
+  VeeamDiscoveredEntity,
+  DiscoveredEntitiesResult,
+  VeeamUnstructuredServer,
+  UnstructuredServersResult,
+  VeeamCredential,
+  VeeamRepositoryDetailed,
+  VeeamInventoryItem,
+  InventoryResult,
+  InventoryFilter,
+  VeeamBackupObject,
+  BackupObjectsResult
 } from '@/lib/types/veeam';
 import { VBMJob, VBMJobsResponse, VBMJobSession, VBMJobSessionsResponse, VBMLicense, VBMHealth, VBMServiceInstance, VBMOrganization, VBMOrganizationsResponse, VBMUsedRepositoriesResponse, VBMUsedRepository, VBMProtectedUser, VBMProtectedUsersResponse, VBMProtectedGroup, VBMProtectedGroupsResponse, VBMProtectedSite, VBMProtectedSitesResponse, VBMProtectedTeam, VBMProtectedTeamsResponse, VBMRestorePoint, VBMRestorePointsResponse, VBMBackupRepository, VBMBackupRepositoriesResponse } from '@/lib/types/vbm';
 import { AuthDebouncer, RateLimiter } from '@/lib/utils/rate-limiter';
@@ -513,6 +526,264 @@ class VeeamApiClient {
     }
   }
 
+  // ============================================
+  // Inventory & Protection Groups
+  // ============================================
+
+  async getProtectionGroups(options?: {
+    skip?: number;
+    limit?: number;
+    orderColumn?: string;
+    orderAsc?: boolean;
+    nameFilter?: string;
+    typeFilter?: string;
+  }): Promise<VeeamProtectionGroup[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.skip !== undefined) params.append('skip', options.skip.toString());
+      if (options?.limit !== undefined) params.append('limit', options.limit.toString());
+      if (options?.orderColumn) params.append('orderColumn', options.orderColumn);
+      if (options?.orderAsc !== undefined) params.append('orderAsc', options.orderAsc.toString());
+      if (options?.nameFilter) params.append('nameFilter', options.nameFilter);
+      if (options?.typeFilter) params.append('typeFilter', options.typeFilter);
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/agents/protectionGroups?${queryString}` : '/agents/protectionGroups';
+
+      const response = await this.request<ProtectionGroupsResult>(endpoint);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching protection groups:', error);
+      throw error;
+    }
+  }
+
+  async getProtectionGroupById(id: string): Promise<VeeamProtectionGroup> {
+    try {
+      return await this.request<VeeamProtectionGroup>(`/agents/protectionGroups/${id}`);
+    } catch (error) {
+      console.error(`Error fetching protection group ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async rescanProtectionGroup(id: string): Promise<void> {
+    try {
+      await this.request(`/agents/protectionGroups/${id}/rescan`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error(`Error rescanning protection group ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async enableProtectionGroup(id: string): Promise<void> {
+    try {
+      await this.request(`/agents/protectionGroups/${id}/enable`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error(`Error enabling protection group ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async disableProtectionGroup(id: string): Promise<void> {
+    try {
+      await this.request(`/agents/protectionGroups/${id}/disable`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error(`Error disabling protection group ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getDiscoveredEntities(groupId: string, options?: {
+    skip?: number;
+    limit?: number;
+    orderColumn?: string;
+    orderAsc?: boolean;
+    nameFilter?: string;
+    typeFilter?: string;
+  }): Promise<VeeamDiscoveredEntity[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.skip !== undefined) params.append('skip', options.skip.toString());
+      if (options?.limit !== undefined) params.append('limit', options.limit.toString());
+      if (options?.orderColumn) params.append('orderColumn', options.orderColumn);
+      if (options?.orderAsc !== undefined) params.append('orderAsc', options.orderAsc.toString());
+      if (options?.nameFilter) params.append('nameFilter', options.nameFilter);
+      if (options?.typeFilter) params.append('typeFilter', options.typeFilter);
+
+      const queryString = params.toString();
+      const endpoint = queryString
+        ? `/agents/protectionGroups/${groupId}/discoveredEntities?${queryString}`
+        : `/agents/protectionGroups/${groupId}/discoveredEntities`;
+
+      const response = await this.request<DiscoveredEntitiesResult>(endpoint);
+      return response.data || [];
+    } catch (error) {
+      console.error(`Error fetching discovered entities for group ${groupId}:`, error);
+      throw error;
+    }
+  }
+
+  // Discovered Entity Actions
+  private async performDiscoveredEntityAction(groupId: string, action: string, entityIds: string[]): Promise<void> {
+    try {
+      await this.request(`/agents/protectionGroups/${groupId}/discoveredEntities/${action}`, {
+        method: 'POST',
+        body: JSON.stringify({ entityIds })
+      });
+    } catch (error) {
+      console.error(`Error performing ${action} on entities in group ${groupId}:`, error);
+      throw error;
+    }
+  }
+
+  async rescanDiscoveredEntities(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'rescan', entityIds);
+  }
+
+  async installAgent(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'installAgent', entityIds);
+  }
+
+  async uninstallAgent(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'uninstallAgent', entityIds);
+  }
+
+  async upgradeAgent(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'upgradeAgent', entityIds);
+  }
+
+  async installCBTDriver(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'installCBTDriver', entityIds);
+  }
+
+  async uninstallCBTDriver(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'uninstallCBTDriver', entityIds);
+  }
+
+
+  async uninstallAllComponents(groupId: string, entityIds: string[]): Promise<void> {
+    await this.performDiscoveredEntityAction(groupId, 'uninstallAllComponents', entityIds);
+  }
+
+  // ============================================
+  // Unstructured Data
+  // ============================================
+
+  async getUnstructuredServers(): Promise<VeeamUnstructuredServer[]> {
+    try {
+      const response = await this.request<UnstructuredServersResult>('/inventory/unstructuredDataServers?limit=200');
+      const servers = response.data || [];
+
+      // Enrich with credentials and repository info
+      const enrichedServers = await Promise.all(servers.map(async (server) => {
+        let enriched = { ...server };
+
+        // Enrich Credentials
+        if (server.accessCredentialsId) {
+          try {
+            const cred = await this.request<VeeamCredential>(`/credentials/${server.accessCredentialsId}`);
+            enriched.credentialsName = cred.username;
+            enriched.credentialsDescription = cred.description ? ` (${cred.description})` : '';
+            enriched.credentialsUserName = cred.username;
+            enriched.credentialsCreationTime = cred.creationTime;
+          } catch {
+            console.warn(`Failed to fetch credentials for server ${server.id}`);
+          }
+        }
+
+        // Enrich Repository (Cache)
+        if (server.processing?.cacheRepositoryId) {
+          try {
+            const repo = await this.request<VeeamRepositoryDetailed>(`/backupInfrastructure/repositories/${server.processing.cacheRepositoryId}`);
+            enriched.repositoryName = repo.name;
+            enriched.repositoryDescription = repo.description;
+          } catch {
+            console.warn(`Failed to fetch repository for server ${server.id}`);
+          }
+        }
+
+        return enriched;
+      }));
+
+      return enrichedServers;
+    } catch (error) {
+      console.error('Error fetching unstructured servers:', error);
+      throw error;
+    }
+  }
+
+  async deleteUnstructuredServer(id: string): Promise<void> {
+    try {
+      await this.request(`/inventory/unstructuredDataServers/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.error(`Error deleting unstructured server ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // Virtual Infrastructure Inventory
+  // ============================================
+
+  async getInventory(filter?: InventoryFilter): Promise<VeeamInventoryItem[]> {
+    try {
+      // 1. Get root objects (vCenters/Servers)
+      // We fetch the root nodes first.
+      const rootResponse = await this.request<InventoryResult>('/inventory?limit=5000', {
+        method: 'POST',
+        body: JSON.stringify({})
+      });
+
+      const rootItems = rootResponse.data || [];
+      const allItems: VeeamInventoryItem[] = [...rootItems];
+
+      // 2. Identify drill-down targets (e.g., vCenterServer)
+      // We want to drill down into platforms that hold VMs.
+      // Based on user feedback: "type": "vCenterServer"
+      const platformsToDrill = ['vCenterServer', 'VMC', 'HyperV', 'SCVMMServer'];
+
+      const drillTargets = rootItems.filter(item => platformsToDrill.includes(item.type));
+
+      // 3. Drill down into each target
+      const drillPromises = drillTargets.map(async (target) => {
+        try {
+          // Use the item's name (e.g., vcsa.jorgedelacruz.es) to fetch its children
+          if (!target.name) return [];
+
+          const drillResponse = await this.request<InventoryResult>(`/inventory/${target.name}?limit=5000`, {
+            method: 'POST',
+            body: JSON.stringify({}) // Fetch everything for this host
+          });
+          return drillResponse.data || [];
+        } catch (e) {
+          console.warn(`Failed to drill down into ${target.name}`, e);
+          return [];
+        }
+      });
+
+      const drilledResults = await Promise.all(drillPromises);
+
+      drilledResults.forEach(items => {
+        allItems.push(...items);
+      });
+
+      return allItems;
+
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      throw error;
+    }
+  }
+
 
 
 
@@ -529,6 +800,9 @@ class VeeamApiClient {
 
     try {
       // Fetch everything without filters
+
+
+
       const [
         vbrJobsRes,
         vbrObjectsRes,
@@ -1189,6 +1463,44 @@ class VeeamApiClient {
   }
 
 
+  // ============================================
+  // Backup Objects (Protection Status)
+  // ============================================
+
+  async getAllBackupObjects(): Promise<VeeamBackupObject[]> {
+    try {
+      const allObjects: VeeamBackupObject[] = [];
+      let skip = 0;
+      const limit = 500; // Fetch in chunks
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await this.request<BackupObjectsResult>(`/backupObjects?skip=${skip}&limit=${limit}`);
+        const items = response.data || [];
+
+        if (items.length > 0) {
+          allObjects.push(...items);
+          skip += limit;
+        }
+
+        // If we got fewer items than limit, we're done
+        if (items.length < limit) {
+          hasMore = false;
+        }
+
+        // Safety break for extremely large envs to prevent infinite loops if API misbehaves
+        if (allObjects.length > 20000) {
+          console.warn('Backup objects limit reached (20k), stopping fetch.');
+          hasMore = false;
+        }
+      }
+
+      return allObjects;
+    } catch (error) {
+      console.error('Error fetching all backup objects:', error);
+      return [];
+    }
+  }
 }
 
 export const veeamApi = new VeeamApiClient();
