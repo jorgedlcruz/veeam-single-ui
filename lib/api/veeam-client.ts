@@ -42,7 +42,6 @@ import {
   ProxyStatesResult,
   VeeamInventoryItem,
   InventoryResult,
-  InventoryFilter,
   VeeamBackupObject,
   BackupObjectsResult
 } from '@/lib/types/veeam';
@@ -986,10 +985,18 @@ class VeeamApiClient {
       }
 
       // Helper for VBM Items
-      const processVbmItems = (res: PromiseSettledResult<{ results?: any[] }>, type: string) => {
+      interface VBMItem {
+        id: string;
+        name?: string;
+        displayName?: string;
+        url?: string;
+        email?: string;
+        description?: string;
+      }
+      const processVbmItems = (res: PromiseSettledResult<{ results?: VBMItem[] }>, type: string) => {
         if (res.status === 'fulfilled') {
           const items = res.value.results || [];
-          items.forEach((item: any) => {
+          items.forEach((item) => {
             const displayName = item.displayName || item.name || item.url || '';
             const searchTerms = [
               displayName,
