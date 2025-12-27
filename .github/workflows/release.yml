@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package standalone zip
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          APP="veeam-single-ui"
+          OUTROOT="dist"
+          OUTDIR="${OUTROOT}/${APP}-${VERSION}-standalone"
+
+          rm -rf "$OUTROOT"
+          mkdir -p "$OUTDIR"
+
+          # Next.js standalone output
+          cp -R .next/standalone/* "$OUTDIR/"
+
+          # Required alongside standalone
+          mkdir -p "$OUTDIR/.next"
+          cp -R .next/static "$OUTDIR/.next/static"
+          if [ -d "public" ]; then cp -R public "$OUTDIR/public"; fi
+
+          # Helpful files
+          if [ -f ".env.example" ]; then cp .env.example "$OUTDIR/"; fi
+          if [ -f "README.md" ]; then cp README.md "$OUTDIR/"; fi
+
+          # Zip
+          (cd "$OUTROOT" && zip -r "${APP}-${VERSION}-standalone.zip" "$(basename "$OUTDIR")")
+
+      - name: Create GitHub Release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*.zip
