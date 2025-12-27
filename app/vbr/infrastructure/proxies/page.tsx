@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { VeeamProxy } from '@/lib/types/veeam';
 import { veeamApi as veeamApiClient } from '@/lib/api/veeam-client';
 import { BackupProxiesTable } from '@/components/backup-proxies-table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Server } from 'lucide-react';
 
 export default function BackupProxiesPage() {
     const [proxies, setProxies] = useState<VeeamProxy[]>([]);

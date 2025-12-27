@@ -75,7 +75,7 @@ export const columns: ColumnDef<VeeamRestorePoint>[] = [
             if (type) return <Badge variant="outline">{type}</Badge>
 
             // Fallback to old logic if type is missing
-            const isGfs = (row.original as any).isGfs
+            const isGfs = (row.original as unknown as { isGfs?: boolean }).isGfs
             return <Badge variant={isGfs ? "default" : "secondary"}>{isGfs ? "Full (GFS)" : "Incremental"}</Badge>
         }
     },

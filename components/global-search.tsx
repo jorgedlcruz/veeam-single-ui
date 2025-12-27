@@ -13,13 +13,7 @@ import {
     CommandList,
     CommandSeparator,
 } from "@/components/ui/command"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+
 import { veeamApi } from "@/lib/api/veeam-client"
 
 interface SearchResult {
@@ -83,7 +77,7 @@ export function GlobalSearch() {
             setLoading(true)
             try {
                 const data = await veeamApi.globalSearch(debouncedQuery)
-                setResults(data)
+                setResults(data as SearchResult[])
                 setIsOpen(true)
             } catch (error) {
                 console.error("Search failed", error)

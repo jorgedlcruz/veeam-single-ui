@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         }
 
         const rpResult = await rpResponse.json();
-        let restorePoints: VeeamRestorePoint[] = rpResult.data;
+        const restorePoints: VeeamRestorePoint[] = rpResult.data;
 
         // Optimize: If we have no restore points, Return early
         if (restorePoints.length === 0) {
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
             const matchingFile = backupFiles.find(file => {
                 // The user JSON shows backupFile has restorePointIds array.
                 // We need to check if VeeamBackupFile type has it, if not we treat it as unknown/any for now
-                const fileWithRps = file as any;
+                const fileWithRps = file as unknown as { restorePointIds?: string[] };
                 return fileWithRps.restorePointIds && fileWithRps.restorePointIds.includes(rp.id);
             });
 

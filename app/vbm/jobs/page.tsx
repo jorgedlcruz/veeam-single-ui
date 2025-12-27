@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { VBMJobsTable } from "@/components/vbm-jobs-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VBMJob } from "@/lib/types/vbm"

@@ -266,7 +266,7 @@ export function VBMJobsTable({ data, loading = false, onRefresh, orgLookup = {} 
         )
       },
     },
-  ], [onRefresh])
+  ], [onRefresh, orgLookup])
 
   const table = useReactTable({
     data,

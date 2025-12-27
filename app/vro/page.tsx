@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { RecoveryPlansTable } from "@/components/recovery-plans-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VRORecoveryPlan } from "@/lib/types/veeam"

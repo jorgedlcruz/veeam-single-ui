@@ -1,7 +1,7 @@
 "use client"
 
 import { DiscoveredEntitiesTable } from "@/components/discovered-entities-table"
-import { useParams } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"

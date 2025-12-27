@@ -20,10 +20,8 @@ import {
     MoreHorizontal,
     Search,
     RefreshCw,
-    AlertCircle,
-    Database,
-    Trash2,
     RotateCw,
+    Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

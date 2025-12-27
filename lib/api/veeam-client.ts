@@ -801,7 +801,7 @@ class VeeamApiClient {
 
       // Enrich with credentials and repository info
       const enrichedServers = await Promise.all(servers.map(async (server) => {
-        let enriched = { ...server };
+        const enriched = { ...server };
 
         // Enrich Credentials
         if (server.accessCredentialsId) {
@@ -852,7 +852,7 @@ class VeeamApiClient {
   // Virtual Infrastructure Inventory
   // ============================================
 
-  async getInventory(filter?: InventoryFilter): Promise<VeeamInventoryItem[]> {
+  async getInventory(): Promise<VeeamInventoryItem[]> {
     try {
       // 1. Get root objects (vCenters/Servers)
       // We fetch the root nodes first.
@@ -906,7 +906,7 @@ class VeeamApiClient {
 
 
   // Cache for global search
-  private searchInventory: any[] = [];
+  private searchInventory: { id: string; name: string; type: string; url: string; description: string; searchStr: string }[] = [];
   private inventoryLastUpdated: number = 0;
   private readonly INVENTORY_TTL = 30 * 60 * 1000; // 30 minutes
 
@@ -933,14 +933,14 @@ class VeeamApiClient {
 
         this.getBackupJobs({}), // No filter
         this.getProtectedData(),
-        this.requestVBM<any>('/jobs?limit=5000'),
-        this.requestVBM<any>('/ProtectedUsers?limit=5000'),
-        this.requestVBM<any>('/ProtectedGroups?limit=5000'),
-        this.requestVBM<any>('/ProtectedSites?limit=5000'),
-        this.requestVBM<any>('/ProtectedTeams?limit=5000')
+        this.requestVBM<VBMJobsResponse>('/jobs?limit=5000'),
+        this.requestVBM<VBMProtectedUsersResponse>('/ProtectedUsers?limit=5000'),
+        this.requestVBM<VBMProtectedGroupsResponse>('/ProtectedGroups?limit=5000'),
+        this.requestVBM<VBMProtectedSitesResponse>('/ProtectedSites?limit=5000'),
+        this.requestVBM<VBMProtectedTeamsResponse>('/ProtectedTeams?limit=5000')
       ]);
 
-      const newInventory: any[] = [];
+      const newInventory: { id: string; name: string; type: string; url: string; description: string; searchStr: string }[] = [];
 
       // Process VBR Jobs
       if (vbrJobsRes.status === 'fulfilled') {
@@ -973,7 +973,7 @@ class VeeamApiClient {
       // Process VBM Jobs
       if (vbmJobsRes.status === 'fulfilled') {
         const jobs = vbmJobsRes.value.results || [];
-        jobs.forEach((job: any) => {
+        jobs.forEach((job) => {
           newInventory.push({
             id: job.id,
             name: job.name,
@@ -986,7 +986,7 @@ class VeeamApiClient {
       }
 
       // Helper for VBM Items
-      const processVbmItems = (res: PromiseSettledResult<any>, type: string) => {
+      const processVbmItems = (res: PromiseSettledResult<{ results?: any[] }>, type: string) => {
         if (res.status === 'fulfilled') {
           const items = res.value.results || [];
           items.forEach((item: any) => {
@@ -1023,7 +1023,7 @@ class VeeamApiClient {
     }
   }
 
-  async globalSearch(query: string): Promise<any[]> {
+  async globalSearch(query: string): Promise<{ id: string; name: string; type: string; url: string; description: string; searchStr: string }[]> {
     if (!query || query.length < 2) return [];
 
     // Ensure we have data
@@ -1684,7 +1684,7 @@ class VeeamApiClient {
             // "repository": { "makeRecentBackupsImmutableDays": 7, ... }
             // I need to update my VeeamRepository type to include this field if it's there.
             // Let's add dynamic access or update type.
-            const anyRepo = repo.repository as any;
+            const anyRepo = repo.repository as unknown as { makeRecentBackupsImmutableDays?: number };
             if (anyRepo.makeRecentBackupsImmutableDays) {
               immutabilityEnabled = true;
               immutabilityDays = anyRepo.makeRecentBackupsImmutableDays;
@@ -1708,7 +1708,7 @@ class VeeamApiClient {
     }
   }
 
-  async rescanBackupRepository(ids: string[]): Promise<any> {
+  async rescanBackupRepository(ids: string[]): Promise<void> {
     try {
       return await this.request('/backupInfrastructure/repositories/rescan', {
         method: 'POST',
@@ -1720,7 +1720,7 @@ class VeeamApiClient {
     }
   }
 
-  async deleteBackupRepository(id: string): Promise<any> {
+  async deleteBackupRepository(id: string): Promise<void> {
     try {
       return await this.request(`/backupInfrastructure/repositories/${id}`, {
         method: 'DELETE'

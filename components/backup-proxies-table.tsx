@@ -33,7 +33,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, ChevronDown, Check, X, Server, Power, PowerOff, Trash2, Edit, Search, RefreshCw, Smartphone, Monitor } from "lucide-react";
+import { MoreHorizontal, ChevronDown, Server, Power, PowerOff, Trash2, Edit, Search, RefreshCw } from "lucide-react";
 import { VeeamProxy } from "@/lib/types/veeam";
 import { toast } from "sonner";
 import { veeamApi as veeamApiClient } from "@/lib/api/veeam-client";
@@ -260,17 +260,7 @@ export function BackupProxiesTable({ data, isLoading, onRefresh }: BackupProxies
         // Add others if known
     ];
 
-    const statusOptions = [
-        { label: "Online", value: "true" }, // isOnline is boolean, faceted filter usually expects string matches or we need to adapt accessor?
-        // Wait, accessor is boolean. Faceted filter usually works with strings.
-        // Let's check filter function.
-        { label: "Offline", value: "false" }
-    ];
 
-    const stateOptions = [
-        { label: "Disabled", value: "true" },
-        { label: "Enabled", value: "false" }
-    ];
 
     return (
         <div className="w-full space-y-4">
