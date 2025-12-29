@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { DashboardStats } from "@/components/dashboard-stats"
 import { SessionsOverview } from "@/components/sessions-overview"
 import { StorageCapacityWidget } from "@/components/storage-capacity-widget"
@@ -15,7 +15,8 @@ import {
     LicenseModel,
     MalwareEventModel,
     SecurityBestPracticeItem,
-    VeeamServerInfo
+    VeeamServerInfo,
+    TransferRateDataPoint
 } from "@/lib/types/veeam"
 import { calculateTransferRates } from "@/lib/utils/transfer-rate"
 import { TransferRateChart } from "@/components/transfer-rate-chart"
@@ -29,7 +30,7 @@ export default function VBRPage() {
     const [securityItems, setSecurityItems] = useState<SecurityBestPracticeItem[]>([])
     const [sessions, setSessions] = useState<VeeamSession[]>([])
     const [timeRange, setTimeRange] = useState<"7d" | "30d">("7d")
-    const [transferRateData, setTransferRateData] = useState<any[]>([])
+    const [transferRateData, setTransferRateData] = useState<TransferRateDataPoint[]>([])
 
     const [loading, setLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -37,10 +38,12 @@ export default function VBRPage() {
 
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-    const fetchData = async () => {
+    const hasLoadedOnce = useRef(false)
+
+    const fetchData = useCallback(async () => {
         try {
             // Only show full loading state on initial load
-            if (jobs.length === 0) setLoading(true)
+            if (!hasLoadedOnce.current) setLoading(true)
             else setIsRefreshing(true)
 
             setError(null)
@@ -82,6 +85,7 @@ export default function VBRPage() {
             setSecurityItems(securityData)
             setTransferRateData(calculateTransferRates(sessionsData))
             setLastUpdated(new Date())
+            hasLoadedOnce.current = true
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error)
             setError(error instanceof Error ? error.message : String(error))
@@ -89,14 +93,14 @@ export default function VBRPage() {
             setLoading(false)
             setIsRefreshing(false)
         }
-    }
+    }, [timeRange])
 
     useEffect(() => {
         fetchData()
         // Refresh data every 5 minutes
         const interval = setInterval(fetchData, 300000)
         return () => clearInterval(interval)
-    }, [timeRange])
+    }, [fetchData])
 
     // Calculate job stats - count jobs that are currently running
     const activeJobs = jobs.filter(j => j.isRunning || j.status === 'Running').length

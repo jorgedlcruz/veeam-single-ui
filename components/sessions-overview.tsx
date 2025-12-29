@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts" // Added YAxis
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// Tabs imports removed
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ import {
     getPaginationRowModel // Added
 } from "@tanstack/react-table"
 import { VeeamSession } from "@/lib/types/veeam"
-import { ArrowUpDown, CheckCircle2, AlertTriangle, XCircle, HelpCircle, Columns, ChevronLeft, ChevronRight, X } from "lucide-react" // Added icons
+import { ArrowUpDown, CheckCircle2, AlertTriangle, XCircle, HelpCircle, Columns, ChevronLeft, ChevronRight } from "lucide-react" // Added icons
 import { DataTableFacetedFilter } from "@/components/data-table-faceted-filter"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -152,13 +152,20 @@ export const columns: ColumnDef<VeeamSession>[] = [
 ]
 
 // Custom Tooltip Component
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayload {
+    name: string
+    value: number
+    color?: string
+    payload?: unknown
+}
+
+const CustomTooltip = ({ active, payload, label }: { active?: boolean, payload?: TooltipPayload[], label?: string }) => {
     if (active && payload && payload.length) {
         return (
             <div className="border border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl">
-                <div className="font-medium text-foreground">{new Date(label).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                <div className="font-medium text-foreground">{new Date(label || "").toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                 <div className="grid gap-1.5">
-                    {payload.map((entry: any, index: number) => {
+                    {payload.map((entry: TooltipPayload, index: number) => {
                         if (entry.value === 0) return null; // Hide if value is 0
                         const colorMap: Record<string, string> = {
                             "Success": "#22c55e",
