@@ -6,7 +6,6 @@ import { veeamApi } from "@/lib/api/veeam-client"
 import { VeeamUser, SecuritySettings, VeeamRole } from "@/lib/types/veeam"
 import { deleteUserAction, resetMFAAction, toggleServiceAccountAction, updateMFAAction } from "@/app/actions/identity-actions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -227,84 +226,83 @@ export default function UsersPage() {
                     </div>
                 </div>
 
-                <Card>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
+
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Target</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Roles</TableHead>
+                                <TableHead>Service Account</TableHead>
+                                <TableHead className="w-[100px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading && users.length === 0 ? (
                                 <TableRow>
-                                    <TableHead>Target</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Roles</TableHead>
-                                    <TableHead>Service Account</TableHead>
-                                    <TableHead className="w-[100px]"></TableHead>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading && users.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                            ) : users.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        No users found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                users.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center space-x-2">
+                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                <span>{user.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{user.type}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.roles.map(role => (
+                                                    <Badge key={role.id} variant="secondary">
+                                                        {role.name}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Switch
+                                                checked={user.isServiceAccount}
+                                                onCheckedChange={() => handleToggleServiceAccount(user.id, user.isServiceAccount)}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Open menu</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => handleResetMFA(user.id)}>
+                                                        Reset MFA
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => openRolesDialog(user)}>
+                                                        Edit Roles
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteDialog(user)}>
+                                                        Delete User
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
-                                ) : users.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            No users found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    users.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell className="font-medium">
-                                                <div className="flex items-center space-x-2">
-                                                    <User className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{user.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{user.type}</TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {user.roles.map(role => (
-                                                        <Badge key={role.id} variant="secondary">
-                                                            {role.name}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Switch
-                                                    checked={user.isServiceAccount}
-                                                    onCheckedChange={() => handleToggleServiceAccount(user.id, user.isServiceAccount)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onSelect={() => handleResetMFA(user.id)}>
-                                                            Reset MFA
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => openRolesDialog(user)}>
-                                                            Edit Roles
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteDialog(user)}>
-                                                            Delete User
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             <Dialog open={isRolesDialogOpen} onOpenChange={setIsRolesDialogOpen}>
@@ -376,6 +374,6 @@ export default function UsersPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </div >
     )
 }

@@ -4,10 +4,9 @@ import * as React from "react"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VeeamRole } from "@/lib/types/veeam"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Loader2, Shield, Circle, Eye, RefreshCw } from "lucide-react"
+import { Loader2, Shield, Eye, RefreshCw } from "lucide-react"
 
 export default function RolesPage() {
     const [roles, setRoles] = React.useState<VeeamRole[]>([])
@@ -90,58 +89,50 @@ export default function RolesPage() {
                     </Button>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-lg font-medium">System Roles</h3>
-                        <p className="text-sm text-muted-foreground">List of roles used for access control.</p>
-                    </div>
 
-                    <Card className="border-none shadow-none bg-background/50">
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead>Role Name</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Role Name</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading && roles.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center">
+                                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : roles.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center">
+                                        No roles found.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                roles.map((role) => (
+                                    <TableRow key={role.id}>
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center space-x-3">
+                                                <Shield className="h-4 w-4 text-muted-foreground" />
+                                                <span>{role.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">{role.description}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm" onClick={() => handleViewPermissions(role)} className="h-8">
+                                                <Eye className="mr-2 h-3.5 w-3.5" />
+                                                View Permissions
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading && roles.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="h-24 text-center">
-                                                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : roles.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="h-24 text-center">
-                                                No roles found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        roles.map((role) => (
-                                            <TableRow key={role.id} className="group hover:bg-muted/50">
-                                                <TableCell className="font-medium py-4">
-                                                    <div className="flex items-center space-x-3">
-                                                        <Circle className="h-4 w-4 text-muted-foreground stroke-[1.5px]" />
-                                                        <span>{role.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="py-4 text-muted-foreground">{role.description}</TableCell>
-                                                <TableCell className="text-right py-4">
-                                                    <Button variant="outline" size="sm" onClick={() => handleViewPermissions(role)} className="h-8">
-                                                        <Eye className="mr-2 h-3.5 w-3.5" />
-                                                        View Permissions
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
 
                 <Dialog open={!!selectedRole} onOpenChange={(open) => !open && setSelectedRole(null)}>
@@ -186,6 +177,6 @@ export default function RolesPage() {
                     </DialogContent>
                 </Dialog>
             </div>
-        </div>
+        </div >
     )
 }

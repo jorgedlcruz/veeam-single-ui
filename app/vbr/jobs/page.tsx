@@ -31,7 +31,7 @@ export default function VBRJobsPage() {
         fetchJobs()
 
         // Refresh data every 30 seconds
-        const interval = setInterval(fetchJobs, 30000)
+        const interval = setInterval(fetchJobs, 60000)
         return () => clearInterval(interval)
     }, [fetchJobs])
 
