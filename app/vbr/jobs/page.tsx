@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from "react"
-import { BackupJobsTable } from "@/components/backup-jobs-table"
+import { BackupJobsTable } from "./_components/backup-jobs-table"
 import { veeamApi } from "@/lib/api/veeam-client"
 import { VeeamBackupJob } from "@/lib/types/veeam"
 

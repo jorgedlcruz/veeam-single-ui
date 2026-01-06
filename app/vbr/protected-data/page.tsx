@@ -1,48 +1,22 @@
-
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
 import { ShieldAlert, RefreshCw, Database, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ProtectedDataTable } from "@/components/vbr-protected-data-table"
-import { VeeamProtectedWorkload } from "@/lib/types/veeam"
-import { veeamApi } from "@/lib/api/veeam-client"
+import { ProtectedDataTable } from "./_components/protected-data-table"
+import { useProtectedData } from "./use-protected-data"
 
 export default function ProtectedDataPage() {
-    const [data, setData] = useState<VeeamProtectedWorkload[]>([])
-    const [loading, setLoading] = useState(true)
-    const [storageStats, setStorageStats] = useState<{ totalBackupSize: number, fileCount: number } | null>(null)
-    const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
-
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true)
-
-            // Parallel fetch for stats and data
-            const [protectedData, capacityRes] = await Promise.all([
-                veeamApi.getProtectedData(),
-                fetch('/api/vbr/StorageCapacity').then(res => res.ok ? res.json() : null)
-            ])
-
-            setData(protectedData)
-            setStorageStats(capacityRes)
-            setLastRefreshed(new Date())
-        } catch (error) {
-            console.error('Failed to fetch protected data:', error)
-        } finally {
-            setLoading(false)
-        }
-    }, [])
-
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
-
-    // Calculate Summary Stats
-    const totalObjects = data.length
-    // Use storage stats for totals size, but calculate restore points from the workloads themselves to match the grid
-    const totalRestorePoints = data.reduce((sum, item) => sum + (item.restorePointsCount || 0), 0)
+    const {
+        data,
+        loading,
+        storageStats,
+        lastRefreshed,
+        totalObjects,
+        totalRestorePoints,
+        topPlatform,
+        refresh
+    } = useProtectedData()
 
     const formatBytes = (bytes: number) => {
         if (!bytes) return "0 B"
@@ -68,7 +42,7 @@ export default function ProtectedDataPage() {
                                 Updated: {lastRefreshed.toLocaleTimeString()}
                             </span>
                         )}
-                        <Button onClick={fetchData} disabled={loading} size="sm">
+                        <Button onClick={refresh} disabled={loading} size="sm">
                             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                             Refresh
                         </Button>
@@ -130,13 +104,7 @@ export default function ProtectedDataPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {/* Simple logic to find most common platform */}
-                                {data.length > 0 ?
-                                    Object.entries(data.reduce((acc, curr) => {
-                                        acc[curr.platformName] = (acc[curr.platformName] || 0) + 1;
-                                        return acc;
-                                    }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
-                                    : 'N/A'}
+                                {topPlatform}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Most common workload type

@@ -33,7 +33,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, ChevronDown, Server, Power, PowerOff, Trash2, Edit, Search, RefreshCw, ServerCog } from "lucide-react";
+import { MoreHorizontal, ChevronDown, Power, PowerOff, Trash2, Edit, Search, RefreshCw, ServerCog } from "lucide-react";
 import { VeeamProxy } from "@/lib/types/veeam";
 import { toast } from "sonner";
 import { veeamApi as veeamApiClient } from "@/lib/api/veeam-client";

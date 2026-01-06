@@ -34,14 +34,11 @@ import {
 import { ManagedServer } from "@/lib/types/veeam"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-    Monitor,
     Server,
-    HardDrive,
     ArrowUpDown,
     CheckCircle2,
     XCircle,
     Columns,
-    UserRoundCog,
     FolderClosed,
     MonitorDot
 } from "lucide-react"

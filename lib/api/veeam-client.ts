@@ -12,7 +12,6 @@ import {
   RepositoryModel,
   RepositoriesResult,
   LicenseModel,
-  LicenseReport,
   MalwareEventModel,
   MalwareEventsResult,
   SecurityBestPracticeItem,
@@ -44,7 +43,13 @@ import {
   VeeamInventoryItem,
   InventoryResult,
   VeeamBackupObject,
-  BackupObjectsResult
+  BackupObjectsResult,
+  VeeamUser,
+  VeeamRole,
+  UsersResult,
+  RolesResult,
+  RolePermissionsResult,
+  SecuritySettings
 } from '@/lib/types/veeam';
 import { VBMJob, VBMJobsResponse, VBMJobSession, VBMJobSessionsResponse, VBMLicense, VBMHealth, VBMServiceInstance, VBMOrganization, VBMOrganizationsResponse, VBMUsedRepositoriesResponse, VBMUsedRepository, VBMProtectedUser, VBMProtectedUsersResponse, VBMProtectedGroup, VBMProtectedGroupsResponse, VBMProtectedSite, VBMProtectedSitesResponse, VBMProtectedTeam, VBMProtectedTeamsResponse, VBMRestorePoint, VBMRestorePointsResponse, VBMBackupRepository, VBMBackupRepositoriesResponse } from '@/lib/types/vbm';
 import { AuthDebouncer, RateLimiter } from '@/lib/utils/rate-limiter';
@@ -99,7 +104,13 @@ class VeeamApiClient {
     }
 
     try {
-      const response = await fetch('/api/veeam/auth', {
+      let authUrl = '/api/veeam/auth';
+      if (typeof window === 'undefined') {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        authUrl = `${baseUrl}${authUrl}`;
+      }
+
+      const response = await fetch(authUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +143,13 @@ class VeeamApiClient {
     }
 
     try {
-      const response = await fetch('/api/veeam/auth', {
+      let authUrl = '/api/veeam/auth';
+      if (typeof window === 'undefined') {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        authUrl = `${baseUrl}${authUrl}`;
+      }
+
+      const response = await fetch(authUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,10 +180,18 @@ class VeeamApiClient {
     }
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit & { apiPrefix?: string }): Promise<T> {
     const token = await this.authenticate();
 
-    const url = `/api/veeam${endpoint}`;
+    const prefix = options?.apiPrefix ?? '/api/veeam';
+    let url = `${prefix}${endpoint}`;
+
+    if (typeof window === 'undefined') {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      if (url.startsWith('/')) {
+        url = `${baseUrl}${url}`;
+      }
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -637,19 +662,10 @@ class VeeamApiClient {
 
   async getProtectedData(): Promise<VeeamProtectedWorkload[]> {
     try {
-      const token = await this.authenticate();
-      const response = await fetch('/api/vbr/protected-data', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await this.request<{ data: VeeamProtectedWorkload[] }>('/protected-data', {
+        apiPrefix: '/api/vbr'
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch protected data: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || [];
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching protected data:', error);
       throw error;
@@ -658,19 +674,10 @@ class VeeamApiClient {
 
   async getBackupFiles(backupId: string): Promise<VeeamBackupFile[]> {
     try {
-      const token = await this.authenticate();
-      const response = await fetch(`/api/vbr/backups/${backupId}/files`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await this.request<{ data: VeeamBackupFile[] }>(`/backups/${backupId}/files`, {
+        apiPrefix: '/api/vbr'
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch backup files: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || [];
+      return response.data || [];
     } catch (error) {
       console.error(`Error fetching backup files for ${backupId}:`, error);
       throw error;
@@ -681,26 +688,30 @@ class VeeamApiClient {
 
   async getVBRRestorePoints(params: { objectId?: string, backupId?: string }): Promise<VeeamRestorePoint[]> {
     try {
-      const token = await this.authenticate();
       const query = new URLSearchParams();
       if (params.objectId) query.append('objectId', params.objectId);
       if (params.backupId) query.append('backupId', params.backupId);
 
-      const response = await fetch(`/api/vbr/restore-points?${query.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const endpoint = query.toString() ? `/restore-points?${query.toString()}` : '/restore-points';
+
+      const response = await this.request<{ data: VeeamRestorePoint[] }>(endpoint, {
+        apiPrefix: '/api/vbr'
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch restore points: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || [];
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching VBR restore points:', error);
       throw error;
+    }
+  }
+
+  async getStorageCapacity(): Promise<{ totalBackupSize: number, fileCount: number } | null> {
+    try {
+      return await this.request<{ totalBackupSize: number, fileCount: number }>('/StorageCapacity', {
+        apiPrefix: '/api/vbr'
+      });
+    } catch (error) {
+      console.error('Error fetching storage capacity:', error);
+      return null;
     }
   }
 
@@ -1795,6 +1806,113 @@ class VeeamApiClient {
       });
     } catch (error) {
       console.error('Failed to delete backup repository:', error);
+      throw error;
+    }
+  }
+
+
+  // ============================================
+  // Identity Management
+  // ============================================
+
+  async getUsers(options?: { skip?: number; limit?: number }): Promise<VeeamUser[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.skip) params.append('skip', options.skip.toString());
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/security/users?${queryString}` : '/security/users';
+
+      const response = await this.request<UsersResult>(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    try {
+      await this.request(`/security/users/${id}`, { method: 'DELETE' });
+    } catch (error) {
+      console.error(`Error deleting user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async updateUserRoles(id: string, roles: VeeamRole[]): Promise<void> {
+    try {
+      await this.request(`/security/users/${id}/roles`, {
+        method: 'PUT',
+        body: JSON.stringify({ roles })
+      });
+    } catch (error) {
+      console.error(`Error updating roles for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async resetMFA(id: string): Promise<void> {
+    try {
+      await this.request(`/security/users/${id}/resetMFA`, { method: 'POST' });
+    } catch (error) {
+      console.error(`Error resetting MFA for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async changeServiceAccountMode(id: string, isServiceAccountEnable: boolean): Promise<void> {
+    try {
+      await this.request(`/security/users/${id}/changeServiceAccountMode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isServiceAccountEnable })
+      });
+    } catch (error) {
+      console.error(`Error changing service account mode for user ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getRoles(): Promise<VeeamRole[]> {
+    try {
+      const response = await this.request<RolesResult>('/security/roles?limit=500');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      throw error;
+    }
+  }
+
+  async getRolePermissions(roleId: string): Promise<string[]> {
+    try {
+      const response = await this.request<RolePermissionsResult>(`/security/roles/${roleId}/permissions`);
+      return response.permissions;
+    } catch (error) {
+      console.error(`Error fetching permissions for role ${roleId}:`, error);
+      throw error;
+    }
+  }
+
+  async getSecuritySettings(): Promise<SecuritySettings> {
+    try {
+      return await this.request<SecuritySettings>('/security/settings');
+    } catch (error) {
+      console.error('Error fetching security settings:', error);
+      throw error;
+    }
+  }
+
+  async updateSecuritySettings(settings: SecuritySettings): Promise<void> {
+    try {
+      await this.request('/security/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+    } catch (error) {
+      console.error('Error updating security settings:', error);
       throw error;
     }
   }
