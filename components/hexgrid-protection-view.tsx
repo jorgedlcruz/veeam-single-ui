@@ -183,7 +183,7 @@ export function HexGridProtectionView({ data, loading }: HexGridProtectionViewPr
             const y = size.y * 1.5 * hex.r * spacing
             return { x, y }
         })
-    }, [hexagons])
+    }, [hexagons, size.x, size.y, spacing])
 
     const { viewBox, gridHeight } = useMemo(() => {
         if (pixelCoords.length === 0) {

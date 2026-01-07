@@ -51,7 +51,7 @@ import {
   RolePermissionsResult,
   SecuritySettings
 } from '@/lib/types/veeam';
-import { VBMJob, VBMJobsResponse, VBMJobSession, VBMJobSessionsResponse, VBMLicense, VBMHealth, VBMServiceInstance, VBMOrganization, VBMOrganizationsResponse, VBMUsedRepositoriesResponse, VBMUsedRepository, VBMProtectedUser, VBMProtectedUsersResponse, VBMProtectedGroup, VBMProtectedGroupsResponse, VBMProtectedSite, VBMProtectedSitesResponse, VBMProtectedTeam, VBMProtectedTeamsResponse, VBMRestorePoint, VBMRestorePointsResponse, VBMBackupRepository, VBMBackupRepositoriesResponse } from '@/lib/types/vbm';
+import { VBMJob, VBMJobsResponse, VBMJobSession, VBMJobSessionsResponse, VBMLicense, VBMHealth, VBMServiceInstance, VBMOrganization, VBMOrganizationsResponse, VBMUsedRepositoriesResponse, VBMUsedRepository, VBMProtectedUser, VBMProtectedUsersResponse, VBMProtectedGroup, VBMProtectedGroupsResponse, VBMProtectedSite, VBMProtectedSitesResponse, VBMProtectedTeam, VBMProtectedTeamsResponse, VBMRestorePoint, VBMRestorePointsResponse, VBMBackupRepository, VBMBackupRepositoriesResponse, VB365LicensedUser, VB365LicensedUsersResponse, VB365Proxy, VB365ProxiesResponse, VB365Repository, VB365RepositoriesResponse } from '@/lib/types/vbm';
 import { AuthDebouncer, RateLimiter } from '@/lib/utils/rate-limiter';
 
 interface TokenResponse {
@@ -1514,6 +1514,148 @@ class VeeamApiClient {
 
   async getVBMLicense(): Promise<VBMLicense> {
     return this.requestVBM<VBMLicense>('/License')
+  }
+
+  async getVB365LicensedUsers(options?: { limit?: number; offset?: number }): Promise<VB365LicensedUser[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit !== undefined) params.append('limit', options.limit.toString());
+      if (options?.offset !== undefined) params.append('offset', options.offset.toString());
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/LicensedUsers?${queryString}` : '/LicensedUsers';
+
+      const response = await this.requestVBM<VB365LicensedUsersResponse>(endpoint);
+      return response.results || [];
+    } catch (error) {
+      console.error('Error fetching VB365 licensed users:', error);
+      return [];
+    }
+  }
+
+  async revokeVB365License(userId: string): Promise<void> {
+    try {
+      const token = this.vbmToken;
+      const response = await fetch(`/api/vbm/LicensedUsers/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to revoke license: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error revoking VB365 license:', error);
+      throw error;
+    }
+  }
+
+  async generateVB365LicenseReport(startTime: string, endTime: string): Promise<Blob> {
+    try {
+      const token = this.vbmToken;
+      const response = await fetch('/api/vbm/Reports/LicenseOverview', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          startTime,
+          endTime,
+          format: 'PDF',
+          timezone: 'GMT'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate report: ${response.status}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Error generating VB365 license report:', error);
+      throw error;
+    }
+  }
+
+  async getVB365Proxies(options?: { limit?: number; offset?: number }): Promise<VB365Proxy[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit !== undefined) params.append('limit', options.limit.toString());
+      if (options?.offset !== undefined) params.append('offset', options.offset.toString());
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/Proxies?${queryString}` : '/Proxies';
+
+      const response = await this.requestVBM<VB365ProxiesResponse>(endpoint);
+      return response.results || [];
+    } catch (error) {
+      console.error('Error fetching VB365 proxies:', error);
+      return [];
+    }
+  }
+
+  async rescanVB365Proxy(proxyId: string): Promise<void> {
+    try {
+      const token = this.vbmToken;
+      const response = await fetch(`/api/vbm/Proxies/${encodeURIComponent(proxyId)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'rescan' })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to rescan proxy: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error rescanning VB365 proxy:', error);
+      throw error;
+    }
+  }
+
+  async setVB365ProxyMaintenanceMode(proxyId: string, enabled: boolean): Promise<void> {
+    try {
+      const token = this.vbmToken;
+      const response = await fetch(`/api/vbm/Proxies/${encodeURIComponent(proxyId)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: enabled ? 'enableMaintenance' : 'disableMaintenance' })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to set maintenance mode: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error setting VB365 proxy maintenance mode:', error);
+      throw error;
+    }
+  }
+
+  async getVB365Repositories(options?: { limit?: number; offset?: number }): Promise<VB365Repository[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit !== undefined) params.append('limit', options.limit.toString());
+      if (options?.offset !== undefined) params.append('offset', options.offset.toString());
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/BackupRepositories?${queryString}` : '/BackupRepositories';
+
+      const response = await this.requestVBM<VB365RepositoriesResponse>(endpoint);
+      return response.results || [];
+    } catch (error) {
+      console.error('Error fetching VB365 repositories:', error);
+      return [];
+    }
   }
 
   async getVBMHealth(): Promise<VBMHealth> {

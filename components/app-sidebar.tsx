@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog } from "lucide-react"
+import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog, Building2 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -106,7 +106,22 @@ const vbmItems = [
   {
     title: "Organizations",
     href: "/vbm/organizations",
+    icon: Building2,
+  },
+  {
+    title: "Backup Infrastructure",
+    href: "/vbm/infrastructure",
     icon: Server,
+    items: [
+      {
+        title: "Backup Proxies",
+        href: "/vbm/infrastructure/proxies",
+      },
+      {
+        title: "Backup Repositories",
+        href: "/vbm/infrastructure/repositories",
+      },
+    ]
   },
 ]
 
@@ -302,16 +317,50 @@ export function AppSidebar({
           {vb365Configured && (
             <SidebarGroupContent>
               <SidebarMenu>
-                {vbmItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                      <Link href={item.href}>
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {vbmItems.map((item) => {
+                  // Collapsible Item with children
+                  if (item.items && item.items.length > 0) {
+                    const isItemActive = pathname.startsWith(item.href || "")
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <Collapsible defaultOpen={isItemActive} className="group/collapsible">
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip={item.title}>
+                              {item.icon && <item.icon className="h-4 w-4" />}
+                              <span>{item.title}</span>
+                              <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          {item.items && (
+                            <CollapsibleContent>
+                              <SidebarMenuSub>
+                                {item.items.map((subItem) => (
+                                  <SidebarMenuSubItem key={subItem.title}>
+                                    <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                      <Link href={subItem.href}>{subItem.title}</Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                                ))}
+                              </SidebarMenuSub>
+                            </CollapsibleContent>
+                          )}
+                        </Collapsible>
+                      </SidebarMenuItem>
+                    )
+                  }
+
+                  // Standard Item
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                        <Link href={item.href}>
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           )}
