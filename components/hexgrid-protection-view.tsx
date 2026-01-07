@@ -26,7 +26,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Clock, Server, Monitor, Cloud, HardDrive, Database, Filter } from "lucide-react"
+import { Search, Clock, Server, Monitor, Cloud, HardDrive, Database, Filter, User, Users, Globe, MessageSquare } from "lucide-react"
 
 // =======================================================
 // Color Scheme:
@@ -71,6 +71,12 @@ function getHexColor(status: 'protected' | 'unprotected' | 'outOfScope'): string
 // Get icon for object type
 function getTypeIcon(type: string) {
     const t = type.toLowerCase()
+    // VB365 types
+    if (t === 'user') return User
+    if (t === 'group') return Users
+    if (t === 'site') return Globe
+    if (t === 'team') return MessageSquare
+    // VBR types
     if (t.includes('vm') || t.includes('vmware') || t.includes('hyper')) return Monitor
     if (t.includes('computer') || t.includes('agent') || t.includes('physical')) return Server
     if (t.includes('cloud') || t.includes('aws') || t.includes('azure')) return Cloud
@@ -361,7 +367,7 @@ export function HexGridProtectionView({ data, loading }: HexGridProtectionViewPr
             </div>
 
             {/* HexGrid */}
-            <div ref={containerRef} className="rounded-md border bg-card overflow-hidden">
+            <div ref={containerRef} className="w-full rounded-md border bg-card overflow-hidden">
                 {filteredData.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                         No objects match the current filters
@@ -379,11 +385,13 @@ export function HexGridProtectionView({ data, loading }: HexGridProtectionViewPr
                                     q={hex.q}
                                     r={hex.r}
                                     s={hex.s}
+                                    className="hexagon-cell"
                                     style={{
                                         cursor: 'pointer',
                                         fill: getHexColor(hex.status),
                                         stroke: '#fff',
                                         strokeWidth: 0.3,
+                                        transition: 'filter 0.15s ease-in-out',
                                     }}
                                     onClick={() => handleHexClick(hex)}
                                 >
@@ -393,6 +401,11 @@ export function HexGridProtectionView({ data, loading }: HexGridProtectionViewPr
                         </Layout>
                     </HexGrid>
                 )}
+                <style>{`
+                    .hexagon-cell:hover {
+                        filter: brightness(0.8);
+                    }
+                `}</style>
             </div>
 
             {/* Details Dialog */}

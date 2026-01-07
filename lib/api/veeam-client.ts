@@ -271,7 +271,25 @@ class VeeamApiClient {
 
   async getBackupJobById(id: string): Promise<VeeamBackupJob> {
     try {
-      return await this.request<VeeamBackupJob>(`/jobs/${id}`);
+      // Fetch both basic job info and enriched state data
+      const [basicJob, statesResponse] = await Promise.all([
+        this.request<VeeamBackupJob>(`/jobs/${id}`),
+        this.request<JobsResult>(`/jobs/states?idFilter=${id}`)
+      ]);
+
+      // Merge state data if available
+      const stateJob = statesResponse.data?.find(j => j.id === id);
+      if (stateJob) {
+        return {
+          ...basicJob,
+          ...stateJob,
+          // Ensure basic fields aren't overwritten with undefined
+          name: basicJob.name || stateJob.name,
+          type: basicJob.type || stateJob.type,
+        };
+      }
+
+      return basicJob;
     } catch (error) {
       console.error(`Error fetching backup job ${id}:`, error);
       throw error;
