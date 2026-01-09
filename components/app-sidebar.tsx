@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog, Building2 } from "lucide-react"
+import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog, Building2, Bell, FileText, Star, ShieldAlert } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -144,6 +144,35 @@ const k10Items = [
   },
 ]
 
+// Analytics Group - Veeam ONE
+const analyticsItems = [
+  {
+    title: "Threat Center",
+    href: "/analytics/threat-center",
+    icon: ShieldAlert,
+  },
+  {
+    title: "Alarms Overview",
+    href: "/analytics/alarms",
+    icon: Bell,
+  },
+  {
+    title: "Dashboards",
+    href: "/analytics/dashboards",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Report Catalog",
+    href: "/analytics/reports",
+    icon: FileText,
+  },
+  {
+    title: "Saved Reports",
+    href: "/analytics/saved-reports",
+    icon: Star,
+  },
+]
+
 const documentationItems = [
   {
     title: "Veeam Backup & Replication",
@@ -244,7 +273,7 @@ export function AppSidebar({
         {/* Veeam Backup & Replication Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Veeam Backup & Replication</span>
+            <span className="group-data-[collapsible=icon]:hidden">Veeam Data Resilience</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -370,7 +399,7 @@ export function AppSidebar({
         <SidebarGroup>
           <div className="flex items-center justify-between pr-2">
             <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-              <span className="group-data-[collapsible=icon]:hidden">Veeam Recovery Orchestrator</span>
+              <span className="group-data-[collapsible=icon]:hidden">Disaster Recovery</span>
               <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
             </SidebarGroupLabel>
             {!vroConfigured && (
@@ -395,6 +424,28 @@ export function AppSidebar({
               </SidebarMenu>
             </SidebarGroupContent>
           )}
+        </SidebarGroup>
+
+        {/* Analytics Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
+            <span className="group-data-[collapsible=icon]:hidden">Analytics</span>
+            <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {analyticsItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                    <Link href={item.href}>
+                      {item.icon && <item.icon className="h-4 w-4" />}
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
         </SidebarGroup>
 
         {/* Kasten K10 Group */}
