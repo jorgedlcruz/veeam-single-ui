@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { ReportSummary } from "@/components/analytics/report-summary"
 import { ReportDataTable } from "@/components/analytics/report-data-table"
-import { VeeamOneChartResponse, VeeamOneParametersResponse, VeeamOneSummaryResponse, VeeamOneTableResponse } from "@/lib/types/veeam-one"
+import { VeeamOneChartResponse, VeeamOneSummaryResponse, VeeamOneTableResponse } from "@/lib/types/veeam-one"
 
 interface ReportPageProps {
     params: {
@@ -16,33 +16,82 @@ interface ReportPageProps {
 
 export const dynamic = 'force-dynamic'
 
+// Helper: Poll for resourceId (fast - usually 1 poll)
+async function getResourceId(executionId: string): Promise<string | null> {
+    for (let i = 0; i < 10; i++) {
+        const status = await veeamOneClient.getReportSessionStatus(executionId);
+        if (status?.result?.data?.resourceId) {
+            return status.result.data.resourceId;
+        }
+        await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+}
+
 export default async function ReportDetailsPage({ params }: ReportPageProps) {
     const { id: taskId } = await params
 
-    // Fetch all required data in parallel
-    // Note: For charts, we assume specific section IDs as per user request for "Protected VMs" report.
-    // In a generic app, these would be Configurable or discovered.
-    // Using hardcoded/extracted IDs from user provided curl commands.
-    const [template, parameters, summaryData, protectedVmsChart, backupAgeChart, tableData] = await Promise.all([
-        veeamOneClient.getReportTemplate(taskId),
-        veeamOneClient.getReportParameters(taskId),
+    // Get template info
+    const template = await veeamOneClient.getReportTemplate(taskId);
 
-        // Summary Overview (summry1)
-        veeamOneClient.getReportSectionData<VeeamOneSummaryResponse>(taskId, 'summry1')
-            .then(res => res?.items[0]?.data || []),
+    const sessionId = await veeamOneClient.startWebviewSession();
 
-        // Chart: Protected VMs (chart_protected_vms)
-        veeamOneClient.getReportSectionData<VeeamOneChartResponse>(taskId, 'chart_protected_vms')
-            .then(res => res?.items || []),
+    const startResult = await veeamOneClient.startReportSession(taskId, [], sessionId);
+    if (!startResult) {
+        return <div className="container mx-auto py-8 px-4"><h1 className="text-2xl font-bold text-red-500">Failed to start report</h1></div>;
+    }
 
-        // Chart: VM Last Backup Age (Actually called 'chart_vm_last_backup_age' in curl, but maybe label is State)
-        // User curl: chart_vm_last_backup_age
-        veeamOneClient.getReportSectionData<VeeamOneChartResponse>(taskId, 'chart_vm_last_backup_age')
-            .then(res => res?.items || []),
+    const resourceId = await getResourceId(startResult.id);
+    if (!resourceId) {
+        return <div className="container mx-auto py-8 px-4"><h1 className="text-2xl font-bold text-red-500">Failed to get resourceId</h1></div>;
+    }
 
-        // Table Data (table_details)
-        veeamOneClient.getReportSectionData<VeeamOneTableResponse>(taskId, 'table_details')
-            .then(res => res?.items || [])
+    // Helper: Poll section data until non-empty or max attempts
+    async function pollSectionData<T>(
+        sectionId: string,
+        checkHasData: (data: T | null) => boolean,
+        maxAttempts = 20
+    ): Promise<T | null> {
+        for (let i = 0; i < maxAttempts; i++) {
+            const data = await veeamOneClient.getReportSectionData<T>(taskId, sectionId, sessionId, resourceId);
+            if (checkHasData(data)) {
+                return data;
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return await veeamOneClient.getReportSectionData<T>(taskId, sectionId, sessionId, resourceId);
+    }
+
+    // Helper: Poll for parameters (returns array of {name, value})
+    async function pollParameters(maxAttempts = 20): Promise<{ name: string, value: string }[]> {
+        for (let i = 0; i < maxAttempts; i++) {
+            const params = await veeamOneClient.getReportParameters(taskId, sessionId, resourceId);
+            if (params && params.length > 0) {
+                return params;
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return [];
+    }
+
+    const [parameters, summaryData, protectedVmsChart, backupAgeChart, tableData] = await Promise.all([
+        pollParameters(),
+        pollSectionData<VeeamOneSummaryResponse>(
+            'summry1',
+            (data) => data?.items?.[0]?.data?.length > 0
+        ).then(res => res?.items[0]?.data || []),
+        pollSectionData<VeeamOneChartResponse>(
+            'chart_protected_vms',
+            (data) => (data?.items?.length ?? 0) > 0
+        ).then(res => res?.items || []),
+        pollSectionData<VeeamOneChartResponse>(
+            'chart_vm_last_backup_age',
+            (data) => (data?.items?.length ?? 0) > 0
+        ).then(res => res?.items || []),
+        pollSectionData<VeeamOneTableResponse>(
+            'table_details',
+            (data) => (data?.items?.length ?? 0) > 0
+        ).then(res => res?.items || [])
     ])
 
     return (
@@ -55,7 +104,6 @@ export default async function ReportDetailsPage({ params }: ReportPageProps) {
                 </Link>
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">{template?.name || 'Report Details'}</h2>
-                    {/* We might want to fetch Template Name too, but for now generic header */}
                     <p className="text-muted-foreground text-sm font-mono">{template?.description || taskId}</p>
                 </div>
             </div>
