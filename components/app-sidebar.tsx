@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { ChevronRight } from "lucide-react"
+import { useSectionNames } from "@/lib/context/section-names-context"
 
 // VBR Group with subpages
 const vbrItems = [
@@ -238,6 +239,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname()
   const { toggleSidebar } = useSidebar()
+  const { sectionNames } = useSectionNames()
   // State for collapsible sub-menus in VBR
   const [inventoryOpen, setInventoryOpen] = React.useState(false)
   const [infrastructureOpen, setInfrastructureOpen] = React.useState(false)
@@ -273,7 +275,7 @@ export function AppSidebar({
         {/* Veeam Backup & Replication Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Veeam Data Resilience</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbr}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -334,7 +336,7 @@ export function AppSidebar({
         <SidebarGroup>
           <div className="flex items-center justify-between pr-2">
             <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-              <span className="group-data-[collapsible=icon]:hidden">Veeam Backup for M365</span>
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbm}</span>
               <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
             </SidebarGroupLabel>
             {!vb365Configured && (
@@ -399,7 +401,7 @@ export function AppSidebar({
         <SidebarGroup>
           <div className="flex items-center justify-between pr-2">
             <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-              <span className="group-data-[collapsible=icon]:hidden">Disaster Recovery</span>
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vro}</span>
               <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
             </SidebarGroupLabel>
             {!vroConfigured && (
@@ -429,7 +431,7 @@ export function AppSidebar({
         {/* Analytics Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Analytics</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.analytics}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -451,7 +453,7 @@ export function AppSidebar({
         {/* Kasten K10 Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Kasten K10</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.k10}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -478,7 +480,7 @@ export function AppSidebar({
         {/* Administration Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Administration</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.administration}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -532,7 +534,7 @@ export function AppSidebar({
         {/* Documentation Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Documentation</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.documentation}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
