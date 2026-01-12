@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { VeeamOneReportParameter, VeeamOneSummaryResponse, VeeamOneChartItem } from "@/lib/types/veeam-one"
+import { VeeamOneReportParameter, VeeamOneChartItem } from "@/lib/types/veeam-one"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { Badge } from "@/components/ui/badge"
 

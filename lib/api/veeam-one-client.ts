@@ -1,4 +1,4 @@
-import { VeeamOneReportTemplate, VeeamOneTag, VeeamOneGridNode, VeeamOneReportParameter, VeeamOneParametersResponse, VeeamOneSummaryResponse } from '@/lib/types/veeam-one';
+import { VeeamOneReportTemplate, VeeamOneTag, VeeamOneGridNode, VeeamOneReportParameter } from '@/lib/types/veeam-one';
 import { MOCK_PROTECTED_VMS_SUMMARY, MOCK_PROTECTED_VMS_CHART, MOCK_LAST_BACKUP_AGE_CHART, MOCK_VM_DETAILS_TABLE } from './mock-report-data';
 import process from 'process';
 
@@ -220,9 +220,40 @@ class VeeamOneClient {
             const response = await fetch(url, fetchOptions);
 
             if (!response.ok) {
+                // On 401, try to re-authenticate once
+                if (response.status === 401 && !path.includes('/token')) {
+                    console.log('[VeeamOneClient] Got 401, forcing re-authentication...');
+                    this.token = null;
+                    this.tokenExpiry = null;
+                    this.sessionCookie = null;
+                    this.connectionId = null;
+
+                    // Retry once with fresh auth
+                    const freshToken = await this.authenticate();
+                    const freshConnId = await this.getConnectionId();
+
+                    const retryHeaders: Record<string, string> = {
+                        'Authorization': `Bearer ${freshToken}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    };
+                    if (freshConnId) retryHeaders['veeam-connection-id'] = freshConnId;
+                    if (this.sessionCookie) retryHeaders['Cookie'] = this.sessionCookie;
+
+                    const retryResponse = await fetch(url, {
+                        ...options,
+                        headers: { ...retryHeaders, ...options.headers },
+                        credentials: 'include'
+                    });
+
+                    if (retryResponse.ok) {
+                        if (retryResponse.status === 204) return {} as T;
+                        return await retryResponse.json();
+                    }
+                }
+
                 // Try reading body
                 const text = await response.text();
-                // console.error(`[VeeamOneClient] Failed: ${ response.status } ${ path } `, text);
                 throw new Error(`API Request failed: ${response.status} ${path} - ${text}`);
             }
 
@@ -376,7 +407,6 @@ class VeeamOneClient {
 
     // Dynamic Report Generation Methods
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private getAuthSessionId(): string | null {
         if (this.sessionCookie) {
             const match = this.sessionCookie.match(/Reporter_SessionId=([a-f0-9]{32})/i);
@@ -409,34 +439,14 @@ class VeeamOneClient {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async startReportSession(taskId: string, parameters: any[], sessionId: string): Promise<{ id: string, state: string } | null> {
-
-
         const config = await this.getConfiguration();
         const userContextId = config.userContextId;
 
-        // Use the sessionId passed from startWebviewSession (called by the page)
-        // Do NOT call startWebviewSession again here - it creates a new session!
-
         const url = `/api/v2.3/webview/report/tasks/${taskId}/dataset/dsData/start?userContextId=${userContextId}`;
 
-        // Default parameters for Protected VMs report (matches browser request)
-        const defaultParams = [
-            { "name": "RootIDsXml", "reportParameterId": 845, "value": ["1000"] },
-            { "name": "RootIDsXml2", "reportParameterId": 846, "value": [] },
-            { "name": "RootIDsXml3", "reportParameterId": 847, "value": [] },
-            { "name": "BusinessView", "reportParameterId": 848, "value": [] },
-            { "name": "ScopeParams", "reportParameterId": 849, "value": "scopeVBR" },
-            { "name": "Interval", "reportParameterId": 850, "value": 24 },
-            { "name": "IntervalPeriod", "reportParameterId": 851, "value": "hour" },
-            { "name": "ExcludeMask", "reportParameterId": 852, "value": "" },
-            { "name": "JobType", "reportParameterId": 853, "value": ["-1"] },
-            { "name": "ShowTemplates", "reportParameterId": 854, "value": false },
-            { "name": "ExcludeJobs", "reportParameterId": 855, "value": null },
-            { "name": "ScopeVBR", "reportParameterId": 2052, "value": ["1002"] }
-        ];
-
+        // Send provided parameters, or empty array to let the API use report defaults
         const body = {
-            "parameters": parameters.length > 0 ? parameters : defaultParams,
+            "parameters": parameters,
             "session": { "sessionId": sessionId }
         };
 
@@ -447,12 +457,7 @@ class VeeamOneClient {
             });
         } catch (e) {
             console.error("Error starting report session", e);
-            // DEBUG: User requested NO FAKE DATA. Re-throwing error to see what happens.
             throw e;
-            /* MOCK FALLBACK REMOVED
-            console.warn("[VeeamOneClient] API failed, switching to MOCK mode");
-            return { id: "mock-execution-id", state: "Pending" }; 
-            */
         }
     }
 
@@ -479,7 +484,7 @@ class VeeamOneClient {
         const url = `/api/v2.3/webview/report/tasks/${executionId}/status?userContextId=${userContextId}`;
 
         try {
-            const response = await this.request<{ state: string, result?: { data?: { resourceId: string, sections: any[] } } }>(url);
+            const response = await this.request<{ state: string, result?: { data?: { resourceId: string, sections: unknown[] } } }>(url);
             return response;
         } catch (e) {
             console.error("Error checking report status", e);
@@ -498,10 +503,10 @@ class VeeamOneClient {
         // Short-circuit for mock data
         if (sessionId === "mock-execution-id" || resourceId === "mock-resource-id") {
             console.log(`[VeeamOneClient] Serving MOCK data for ${sectionId}`);
-            if (sectionId === 'summry1') return MOCK_PROTECTED_VMS_SUMMARY as any;
-            if (sectionId === 'chart_protected_vms') return MOCK_PROTECTED_VMS_CHART as any;
-            if (sectionId === 'chart_vm_last_backup_age') return MOCK_LAST_BACKUP_AGE_CHART as any;
-            if (sectionId === 'table_details') return MOCK_VM_DETAILS_TABLE as any;
+            if (sectionId === 'summry1') return MOCK_PROTECTED_VMS_SUMMARY as unknown as T;
+            if (sectionId === 'chart_protected_vms') return MOCK_PROTECTED_VMS_CHART as unknown as T;
+            if (sectionId === 'chart_vm_last_backup_age') return MOCK_LAST_BACKUP_AGE_CHART as unknown as T;
+            if (sectionId === 'table_details') return MOCK_VM_DETAILS_TABLE as unknown as T;
             return null;
         }
 
@@ -527,10 +532,10 @@ class VeeamOneClient {
             // MOCK FALLBACK
             if (sessionId === "mock-execution-id" || resourceId === "mock-resource-id" || (sessionId === "demo" && taskId === '8a56d84f-1790-4f54-ab20-2e0bfdefa16b')) {
                 console.log(`[VeeamOneClient] Serving MOCK data for ${sectionId}`);
-                if (sectionId === 'summry1') return MOCK_PROTECTED_VMS_SUMMARY as any;
-                if (sectionId === 'chart_protected_vms') return MOCK_PROTECTED_VMS_CHART as any;
-                if (sectionId === 'chart_vm_last_backup_age') return MOCK_LAST_BACKUP_AGE_CHART as any;
-                if (sectionId === 'table_details') return MOCK_VM_DETAILS_TABLE as any;
+                if (sectionId === 'summry1') return MOCK_PROTECTED_VMS_SUMMARY as unknown as T;
+                if (sectionId === 'chart_protected_vms') return MOCK_PROTECTED_VMS_CHART as unknown as T;
+                if (sectionId === 'chart_vm_last_backup_age') return MOCK_LAST_BACKUP_AGE_CHART as unknown as T;
+                if (sectionId === 'table_details') return MOCK_VM_DETAILS_TABLE as unknown as T;
             }
 
             return null;

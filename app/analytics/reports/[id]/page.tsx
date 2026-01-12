@@ -1,30 +1,47 @@
-
 import { veeamOneClient } from "@/lib/api/veeam-one-client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { ReportSummary } from "@/components/analytics/report-summary"
-import { ReportDataTable } from "@/components/analytics/report-data-table"
-import { VeeamOneChartResponse, VeeamOneSummaryResponse, VeeamOneTableResponse } from "@/lib/types/veeam-one"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { DynamicReportViewClient } from "./client"
 
 interface ReportPageProps {
-    params: {
+    params: Promise<{
         id: string
-    }
+    }>
 }
 
 export const dynamic = 'force-dynamic'
 
-// Helper: Poll for resourceId (fast - usually 1 poll)
-async function getResourceId(executionId: string): Promise<string | null> {
-    for (let i = 0; i < 10; i++) {
+// Helper: Poll for report completion and return resourceId + sections
+interface ReportSessionResult {
+    resourceId: string
+    sections: { sectionId: string; status: string }[]
+}
+
+async function waitForReportReady(executionId: string): Promise<ReportSessionResult | null> {
+    console.log(`[ReportPage] Polling for report completion, executionId: ${executionId}`);
+
+    for (let i = 0; i < 30; i++) {
         const status = await veeamOneClient.getReportSessionStatus(executionId);
+        console.log(`[ReportPage] Poll ${i + 1}/30, state: ${status?.state}, hasResourceId: ${!!status?.result?.data?.resourceId}`);
+
+        // Data is available when resourceId is present, even while state is still "Running"
         if (status?.result?.data?.resourceId) {
-            return status.result.data.resourceId;
+            console.log(`[ReportPage] Report ready! resourceId: ${status.result.data.resourceId}`);
+            console.log(`[ReportPage] Sections:`, status.result.data.sections);
+            return {
+                resourceId: status.result.data.resourceId,
+                sections: status.result.data.sections as { sectionId: string; status: string }[]
+            };
+        }
+        if (status?.state === "Failed") {
+            console.error("[ReportPage] Report generation failed:", status);
+            return null;
         }
         await new Promise(r => setTimeout(r, 500));
     }
+    console.error("[ReportPage] Report generation timed out after 30 polls");
     return null;
 }
 
@@ -34,65 +51,77 @@ export default async function ReportDetailsPage({ params }: ReportPageProps) {
     // Get template info
     const template = await veeamOneClient.getReportTemplate(taskId);
 
+    // Check if this report has web preview capability
+    if (!template?.hasWebPreview) {
+        // Get native preview link for non-webpreview reports
+        const previewLink = template ? await veeamOneClient.getReportPreviewLink(template.reportTemplateId) : null;
+
+        return (
+            <div className="container mx-auto py-8 px-4 flex flex-col h-full space-y-6">
+                <div className="flex items-center gap-4">
+                    <Link href="/analytics/reports">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight">{template?.name || 'Report Details'}</h2>
+                        <p className="text-muted-foreground text-sm">{template?.description || taskId}</p>
+                    </div>
+                </div>
+
+                <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Web Preview Not Available</AlertTitle>
+                    <AlertDescription className="space-y-4">
+                        <p>
+                            This report does not support embedded web preview. You can view it in the native Veeam ONE Reporter interface.
+                        </p>
+                        {previewLink && (
+                            <a
+                                href={previewLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-primary hover:underline"
+                            >
+                                Open in Veeam ONE <ExternalLink className="h-4 w-4" />
+                            </a>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            </div>
+        );
+    }
+
+    // Start report session
+    console.log(`[ReportPage] Starting webview session...`);
     const sessionId = await veeamOneClient.startWebviewSession();
+    console.log(`[ReportPage] Got sessionId: ${sessionId}`);
 
+    console.log(`[ReportPage] Starting report session for taskId: ${taskId}`);
     const startResult = await veeamOneClient.startReportSession(taskId, [], sessionId);
+    console.log(`[ReportPage] Start result:`, startResult);
     if (!startResult) {
-        return <div className="container mx-auto py-8 px-4"><h1 className="text-2xl font-bold text-red-500">Failed to start report</h1></div>;
+        return (
+            <div className="container mx-auto py-8 px-4">
+                <h1 className="text-2xl font-bold text-red-500">Failed to start report session</h1>
+                <p className="text-muted-foreground mt-2">Please try again later.</p>
+            </div>
+        );
     }
 
-    const resourceId = await getResourceId(startResult.id);
-    if (!resourceId) {
-        return <div className="container mx-auto py-8 px-4"><h1 className="text-2xl font-bold text-red-500">Failed to get resourceId</h1></div>;
+    // Wait for report to complete - this returns the sections list!
+    const reportResult = await waitForReportReady(startResult.id);
+    if (!reportResult) {
+        return (
+            <div className="container mx-auto py-8 px-4">
+                <h1 className="text-2xl font-bold text-red-500">Failed to generate report</h1>
+                <p className="text-muted-foreground mt-2">The report timed out or failed while generating.</p>
+            </div>
+        );
     }
 
-    // Helper: Poll section data until non-empty or max attempts
-    async function pollSectionData<T>(
-        sectionId: string,
-        checkHasData: (data: T | null) => boolean,
-        maxAttempts = 20
-    ): Promise<T | null> {
-        for (let i = 0; i < maxAttempts; i++) {
-            const data = await veeamOneClient.getReportSectionData<T>(taskId, sectionId, sessionId, resourceId);
-            if (checkHasData(data)) {
-                return data;
-            }
-            await new Promise(r => setTimeout(r, 500));
-        }
-        return await veeamOneClient.getReportSectionData<T>(taskId, sectionId, sessionId, resourceId);
-    }
-
-    // Helper: Poll for parameters (returns array of {name, value})
-    async function pollParameters(maxAttempts = 20): Promise<{ name: string, value: string }[]> {
-        for (let i = 0; i < maxAttempts; i++) {
-            const params = await veeamOneClient.getReportParameters(taskId, sessionId, resourceId);
-            if (params && params.length > 0) {
-                return params;
-            }
-            await new Promise(r => setTimeout(r, 500));
-        }
-        return [];
-    }
-
-    const [parameters, summaryData, protectedVmsChart, backupAgeChart, tableData] = await Promise.all([
-        pollParameters(),
-        pollSectionData<VeeamOneSummaryResponse>(
-            'summry1',
-            (data) => data?.items?.[0]?.data?.length > 0
-        ).then(res => res?.items[0]?.data || []),
-        pollSectionData<VeeamOneChartResponse>(
-            'chart_protected_vms',
-            (data) => (data?.items?.length ?? 0) > 0
-        ).then(res => res?.items || []),
-        pollSectionData<VeeamOneChartResponse>(
-            'chart_vm_last_backup_age',
-            (data) => (data?.items?.length ?? 0) > 0
-        ).then(res => res?.items || []),
-        pollSectionData<VeeamOneTableResponse>(
-            'table_details',
-            (data) => (data?.items?.length ?? 0) > 0
-        ).then(res => res?.items || [])
-    ])
+    const { resourceId, sections } = reportResult;
 
     return (
         <div className="container mx-auto py-8 px-4 flex flex-col h-full space-y-6">
@@ -103,28 +132,19 @@ export default async function ReportDetailsPage({ params }: ReportPageProps) {
                     </Button>
                 </Link>
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{template?.name || 'Report Details'}</h2>
-                    <p className="text-muted-foreground text-sm font-mono">{template?.description || taskId}</p>
+                    <h2 className="text-2xl font-bold tracking-tight">{template?.name}</h2>
+                    <p className="text-muted-foreground text-sm max-w-3xl line-clamp-2">
+                        {template?.description}
+                    </p>
                 </div>
             </div>
 
-            <Tabs defaultValue="summary" className="space-y-6">
-                <TabsList>
-                    <TabsTrigger value="summary">Summary</TabsTrigger>
-                    <TabsTrigger value="data">Report Data</TabsTrigger>
-                </TabsList>
-                <TabsContent value="summary" className="space-y-6">
-                    <ReportSummary
-                        parameters={parameters}
-                        summaryData={summaryData}
-                        protectedVmsChart={protectedVmsChart}
-                        backupAgeChart={backupAgeChart}
-                    />
-                </TabsContent>
-                <TabsContent value="data">
-                    <ReportDataTable data={tableData} />
-                </TabsContent>
-            </Tabs>
+            <DynamicReportViewClient
+                taskId={taskId}
+                sessionId={sessionId}
+                resourceId={resourceId}
+                sections={sections}
+            />
         </div>
     )
 }

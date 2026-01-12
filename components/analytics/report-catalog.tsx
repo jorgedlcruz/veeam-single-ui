@@ -120,8 +120,15 @@ export function ReportCatalog({ templates, tags }: ReportCatalogProps) {
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between gap-2">
                                     <CardTitle className="text-base font-semibold leading-tight">{template.name}</CardTitle>
-                                    <div className="p-1.5 bg-primary/10 rounded-md shrink-0">
-                                        <FileText className="h-4 w-4 text-primary" />
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        {template.hasWebPreview && (
+                                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 bg-green-100 text-green-800 border-green-200">
+                                                Live
+                                            </Badge>
+                                        )}
+                                        <div className="p-1.5 bg-primary/10 rounded-md">
+                                            <FileText className="h-4 w-4 text-primary" />
+                                        </div>
                                     </div>
                                 </div>
                                 <CardDescription className="text-xs text-muted-foreground">
