@@ -68,8 +68,10 @@ export default async function RootLayout({
             <SectionNamesProvider>
               <SidebarProvider>
                 <AppSidebar
+                  vbrConfigured={!!process.env.VEEAM_API_URL}
                   vb365Configured={!!process.env.VBM_API_URL}
                   vroConfigured={!!process.env.VRO_API_URL}
+                  veeamOneConfigured={!!process.env.VEEAM_ONE_API_URL}
                 />
                 <SidebarInset>
                   <AppHeader />

@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-require-imports */
 require('dotenv').config();
 const { veeamOneClient } = require('./lib/api/veeam-one-client');
 // Mocking RequestInit and fetch for node environment if not polyfilled, 

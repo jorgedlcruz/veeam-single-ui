@@ -48,6 +48,30 @@ async function waitForReportReady(executionId: string): Promise<ReportSessionRes
 export default async function ReportDetailsPage({ params }: ReportPageProps) {
     const { id: taskId } = await params
 
+    // Check if Veeam ONE is configured
+    if (!process.env.VEEAM_ONE_API_URL) {
+        return (
+            <div className="container mx-auto py-8 px-4 flex flex-col h-full space-y-6">
+                <div className="flex items-center gap-4">
+                    <Link href="/analytics/reports">
+                        <Button variant="outline" size="icon">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <h2 className="text-2xl font-bold tracking-tight">Report Details</h2>
+                </div>
+                <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Veeam ONE Not Configured</AlertTitle>
+                    <AlertDescription>
+                        To use analytics and reporting features, please configure the VEEAM_ONE_API_URL,
+                        VEEAM_ONE_USERNAME, and VEEAM_ONE_PASSWORD environment variables.
+                    </AlertDescription>
+                </Alert>
+            </div>
+        )
+    }
+
     // Get template info
     const template = await veeamOneClient.getReportTemplate(taskId);
 

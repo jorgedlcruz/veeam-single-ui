@@ -228,13 +228,17 @@ const adminItems = [
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  vbrConfigured?: boolean
   vb365Configured?: boolean
   vroConfigured?: boolean
+  veeamOneConfigured?: boolean
 }
 
 export function AppSidebar({
+  vbrConfigured = true,
   vb365Configured = true,
   vroConfigured = true,
+  veeamOneConfigured = true,
   ...props
 }: AppSidebarProps) {
   const pathname = usePathname()
@@ -243,6 +247,13 @@ export function AppSidebar({
   // State for collapsible sub-menus in VBR
   const [inventoryOpen, setInventoryOpen] = React.useState(false)
   const [infrastructureOpen, setInfrastructureOpen] = React.useState(false)
+
+  // Filter admin items based on what's configured
+  // Identity only shows when VBR is configured (uses VBR credentials API)
+  const filteredAdminItems = adminItems.filter(item => {
+    if (item.title === "Identity") return vbrConfigured
+    return true
+  })
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -274,62 +285,71 @@ export function AppSidebar({
       <SidebarContent>
         {/* Veeam Backup & Replication Group */}
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbr}</span>
-            <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {vbrItems.map((item) => {
-                // Determine if this item is a sub-menu (like Inventory)
-                const isSubMenu = !!item.items
-                // Determine state for this item
-                const isOpen = item.title === "Inventory" ? inventoryOpen : item.title === "Backup Infrastructure" ? infrastructureOpen : false
-                const setOpen = item.title === "Inventory" ? setInventoryOpen : item.title === "Backup Infrastructure" ? setInfrastructureOpen : () => { }
+          <div className="flex items-center justify-between pr-2">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbr}</span>
+              <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
+            </SidebarGroupLabel>
+            {!vbrConfigured && (
+              <SidebarMenuBadge className="static translate-x-0 opacity-70 border border-slate-400 text-slate-500 bg-transparent h-5 min-w-0 px-1.5 w-auto">
+                Missing
+              </SidebarMenuBadge>
+            )}
+          </div>
+          {vbrConfigured && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {vbrItems.map((item) => {
+                  // Determine if this item is a sub-menu (like Inventory)
+                  const isSubMenu = !!item.items
+                  // Determine state for this item
+                  const isOpen = item.title === "Inventory" ? inventoryOpen : item.title === "Backup Infrastructure" ? infrastructureOpen : false
+                  const setOpen = item.title === "Inventory" ? setInventoryOpen : item.title === "Backup Infrastructure" ? setInfrastructureOpen : () => { }
 
-                if (isSubMenu && item.items) {
+                  if (isSubMenu && item.items) {
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          onClick={() => setOpen(!isOpen)}
+                          tooltip={item.title}
+                          isActive={item.items.some(sub => pathname === sub.href)}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                          <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+                        </SidebarMenuButton>
+                        {isOpen && (
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                  <Link href={subItem.href}>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        )}
+                      </SidebarMenuItem>
+                    )
+                  }
+
+                  // Standard Item
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        onClick={() => setOpen(!isOpen)}
-                        tooltip={item.title}
-                        isActive={item.items.some(sub => pathname === sub.href)}
-                      >
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                        <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+                      <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                        <Link href={item.href!}>
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                        </Link>
                       </SidebarMenuButton>
-                      {isOpen && (
-                        <SidebarMenuSub>
-                          {item.items.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.href}>
-                              <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                                <Link href={subItem.href}>
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      )}
                     </SidebarMenuItem>
                   )
-                }
-
-                // Standard Item
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                      <Link href={item.href!}>
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
         </SidebarGroup>
 
         {/* Veeam Backup for M365 Group */}
@@ -430,24 +450,33 @@ export function AppSidebar({
 
         {/* Analytics Group */}
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.analytics}</span>
-            <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {analyticsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                    <Link href={item.href}>
-                      {item.icon && <item.icon className="h-4 w-4" />}
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
+          <div className="flex items-center justify-between pr-2">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.analytics}</span>
+              <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
+            </SidebarGroupLabel>
+            {!veeamOneConfigured && (
+              <SidebarMenuBadge className="static translate-x-0 opacity-70 border border-slate-400 text-slate-500 bg-transparent h-5 min-w-0 px-1.5 w-auto">
+                Missing
+              </SidebarMenuBadge>
+            )}
+          </div>
+          {veeamOneConfigured && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {analyticsItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                      <Link href={item.href}>
+                        {item.icon && <item.icon className="h-4 w-4" />}
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
         </SidebarGroup>
 
         {/* Kasten K10 Group */}
@@ -485,7 +514,7 @@ export function AppSidebar({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {filteredAdminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.items ? (
                     <Collapsible defaultOpen className="group/collapsible">
