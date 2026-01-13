@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog, Building2 } from "lucide-react"
+import { BookOpen, ChevronDown, Briefcase, Server, Shield, ShieldCheck, LayoutDashboard, Database, FileKey, Palette, Blocks, UserRoundCog, Building2, Bell, FileText, Star, ShieldAlert } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { ChevronRight } from "lucide-react"
+import { useSectionNames } from "@/lib/context/section-names-context"
 
 // VBR Group with subpages
 const vbrItems = [
@@ -144,6 +145,35 @@ const k10Items = [
   },
 ]
 
+// Analytics Group - Veeam ONE
+const analyticsItems = [
+  {
+    title: "Threat Center",
+    href: "/analytics/threat-center",
+    icon: ShieldAlert,
+  },
+  {
+    title: "Alarms Overview",
+    href: "/analytics/alarms",
+    icon: Bell,
+  },
+  {
+    title: "Dashboards",
+    href: "/analytics/dashboards",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Report Catalog",
+    href: "/analytics/reports",
+    icon: FileText,
+  },
+  {
+    title: "Saved Reports",
+    href: "/analytics/saved-reports",
+    icon: Star,
+  },
+]
+
 const documentationItems = [
   {
     title: "Veeam Backup & Replication",
@@ -198,20 +228,32 @@ const adminItems = [
 ]
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  vbrConfigured?: boolean
   vb365Configured?: boolean
   vroConfigured?: boolean
+  veeamOneConfigured?: boolean
 }
 
 export function AppSidebar({
+  vbrConfigured = true,
   vb365Configured = true,
   vroConfigured = true,
+  veeamOneConfigured = true,
   ...props
 }: AppSidebarProps) {
   const pathname = usePathname()
   const { toggleSidebar } = useSidebar()
+  const { sectionNames } = useSectionNames()
   // State for collapsible sub-menus in VBR
   const [inventoryOpen, setInventoryOpen] = React.useState(false)
   const [infrastructureOpen, setInfrastructureOpen] = React.useState(false)
+
+  // Filter admin items based on what's configured
+  // Identity only shows when VBR is configured (uses VBR credentials API)
+  const filteredAdminItems = adminItems.filter(item => {
+    if (item.title === "Identity") return vbrConfigured
+    return true
+  })
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -243,69 +285,78 @@ export function AppSidebar({
       <SidebarContent>
         {/* Veeam Backup & Replication Group */}
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Veeam Backup & Replication</span>
-            <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {vbrItems.map((item) => {
-                // Determine if this item is a sub-menu (like Inventory)
-                const isSubMenu = !!item.items
-                // Determine state for this item
-                const isOpen = item.title === "Inventory" ? inventoryOpen : item.title === "Backup Infrastructure" ? infrastructureOpen : false
-                const setOpen = item.title === "Inventory" ? setInventoryOpen : item.title === "Backup Infrastructure" ? setInfrastructureOpen : () => { }
+          <div className="flex items-center justify-between pr-2">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbr}</span>
+              <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
+            </SidebarGroupLabel>
+            {!vbrConfigured && (
+              <SidebarMenuBadge className="static translate-x-0 opacity-70 border border-slate-400 text-slate-500 bg-transparent h-5 min-w-0 px-1.5 w-auto">
+                Missing
+              </SidebarMenuBadge>
+            )}
+          </div>
+          {vbrConfigured && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {vbrItems.map((item) => {
+                  // Determine if this item is a sub-menu (like Inventory)
+                  const isSubMenu = !!item.items
+                  // Determine state for this item
+                  const isOpen = item.title === "Inventory" ? inventoryOpen : item.title === "Backup Infrastructure" ? infrastructureOpen : false
+                  const setOpen = item.title === "Inventory" ? setInventoryOpen : item.title === "Backup Infrastructure" ? setInfrastructureOpen : () => { }
 
-                if (isSubMenu && item.items) {
+                  if (isSubMenu && item.items) {
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          onClick={() => setOpen(!isOpen)}
+                          tooltip={item.title}
+                          isActive={item.items.some(sub => pathname === sub.href)}
+                        >
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                          <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+                        </SidebarMenuButton>
+                        {isOpen && (
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                  <Link href={subItem.href}>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        )}
+                      </SidebarMenuItem>
+                    )
+                  }
+
+                  // Standard Item
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        onClick={() => setOpen(!isOpen)}
-                        tooltip={item.title}
-                        isActive={item.items.some(sub => pathname === sub.href)}
-                      >
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                        <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+                      <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                        <Link href={item.href!}>
+                          {item.icon && <item.icon className="h-4 w-4" />}
+                          <span>{item.title}</span>
+                        </Link>
                       </SidebarMenuButton>
-                      {isOpen && (
-                        <SidebarMenuSub>
-                          {item.items.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.href}>
-                              <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                                <Link href={subItem.href}>
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      )}
                     </SidebarMenuItem>
                   )
-                }
-
-                // Standard Item
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                      <Link href={item.href!}>
-                        {item.icon && <item.icon className="h-4 w-4" />}
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
         </SidebarGroup>
 
         {/* Veeam Backup for M365 Group */}
         <SidebarGroup>
           <div className="flex items-center justify-between pr-2">
             <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-              <span className="group-data-[collapsible=icon]:hidden">Veeam Backup for M365</span>
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vbm}</span>
               <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
             </SidebarGroupLabel>
             {!vb365Configured && (
@@ -370,7 +421,7 @@ export function AppSidebar({
         <SidebarGroup>
           <div className="flex items-center justify-between pr-2">
             <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-              <span className="group-data-[collapsible=icon]:hidden">Veeam Recovery Orchestrator</span>
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.vro}</span>
               <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
             </SidebarGroupLabel>
             {!vroConfigured && (
@@ -397,10 +448,41 @@ export function AppSidebar({
           )}
         </SidebarGroup>
 
+        {/* Analytics Group */}
+        <SidebarGroup>
+          <div className="flex items-center justify-between pr-2">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
+              <span className="group-data-[collapsible=icon]:hidden">{sectionNames.analytics}</span>
+              <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
+            </SidebarGroupLabel>
+            {!veeamOneConfigured && (
+              <SidebarMenuBadge className="static translate-x-0 opacity-70 border border-slate-400 text-slate-500 bg-transparent h-5 min-w-0 px-1.5 w-auto">
+                Missing
+              </SidebarMenuBadge>
+            )}
+          </div>
+          {veeamOneConfigured && (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {analyticsItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
+                      <Link href={item.href}>
+                        {item.icon && <item.icon className="h-4 w-4" />}
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+
         {/* Kasten K10 Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Kasten K10</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.k10}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -427,12 +509,12 @@ export function AppSidebar({
         {/* Administration Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Administration</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.administration}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {filteredAdminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.items ? (
                     <Collapsible defaultOpen className="group/collapsible">
@@ -481,7 +563,7 @@ export function AppSidebar({
         {/* Documentation Group */}
         <SidebarGroup>
           <SidebarGroupLabel className="group-data-[collapsible=icon]:opacity-100 group-data-[collapsible=icon]:mt-0">
-            <span className="group-data-[collapsible=icon]:hidden">Documentation</span>
+            <span className="group-data-[collapsible=icon]:hidden">{sectionNames.documentation}</span>
             <span className="hidden group-data-[collapsible=icon]:block font-bold">&mdash;</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>

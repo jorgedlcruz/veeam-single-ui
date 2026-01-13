@@ -7,7 +7,8 @@ import {
     ContentLayoutSelector,
     ThemeRadiusSelector,
     ResetThemeButton,
-    SidebarModeSelector
+    SidebarModeSelector,
+    SectionNamesEditor
 } from "@/components/theme-customizer"
 import { Separator } from "@/components/ui/separator"
 
@@ -54,6 +55,19 @@ export default function BrandingPage() {
                         </div>
                     </div>
                 </div>
+
+                <Separator className="my-6" />
+
+                <div className="space-y-4">
+                    <LabelDescription
+                        label="Section Names"
+                        description="Customize the sidebar section labels to match your organization's terminology."
+                    />
+                    <SectionNamesEditor />
+                </div>
+
+                <Separator className="my-6" />
+
                 <div className="flex justify-start">
                     <div className="w-full md:w-auto">
                         <ResetThemeButton />

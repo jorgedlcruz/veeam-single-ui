@@ -10,6 +10,7 @@ import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { cookies } from "next/headers";
 import { cn } from "@/lib/utils";
+import { SectionNamesProvider } from "@/lib/context/section-names-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,16 +65,20 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <SidebarProvider>
-              <AppSidebar
-                vb365Configured={!!process.env.VBM_API_URL}
-                vroConfigured={!!process.env.VRO_API_URL}
-              />
-              <SidebarInset>
-                <AppHeader />
-                {children}
-              </SidebarInset>
-            </SidebarProvider>
+            <SectionNamesProvider>
+              <SidebarProvider>
+                <AppSidebar
+                  vbrConfigured={!!process.env.VEEAM_API_URL}
+                  vb365Configured={!!process.env.VBM_API_URL}
+                  vroConfigured={!!process.env.VRO_API_URL}
+                  veeamOneConfigured={!!process.env.VEEAM_ONE_API_URL}
+                />
+                <SidebarInset>
+                  <AppHeader />
+                  {children}
+                </SidebarInset>
+              </SidebarProvider>
+            </SectionNamesProvider>
             <Toaster />
           </ActiveThemeProvider>
         </ThemeProvider>

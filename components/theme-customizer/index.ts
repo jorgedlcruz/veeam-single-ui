@@ -5,4 +5,4 @@ export * from "./theme-radius-selector";
 export * from "./theme-scale-selector";
 export * from "./reset-theme-button";
 export * from "./sidebar-mode-selector";
-
+export * from "./section-names-editor";
