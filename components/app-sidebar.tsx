@@ -546,11 +546,6 @@ export function AppSidebar({
                           <span>{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {item.badge && (
-                        <SidebarMenuBadge className="opacity-50">
-                          {item.badge}
-                        </SidebarMenuBadge>
-                      )}
                     </>
                   )}
                 </SidebarMenuItem>
