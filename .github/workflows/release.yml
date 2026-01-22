@@ -23,7 +23,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build
         run: npm run build
@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          APP="veeam-single-ui"
+          APP="open-backup-ui"
           OUTROOT="dist"
           OUTDIR="${OUTROOT}/${APP}-${VERSION}-standalone"
 
