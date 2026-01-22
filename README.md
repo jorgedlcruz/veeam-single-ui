@@ -1,5 +1,16 @@
 # Veeam Single-UI
 
+> [!IMPORTANT]
+> **Disclaimer (community project, not supported)**
+>
+> This repository is an independent, community-maintained project and **is not an official Veeam product**.
+> It is **not supported by Veeam Support** and there are **no SLAs**. Use at your own risk and test in a lab environment first.
+>
+> This project is **not affiliated with, endorsed by, or sponsored by Veeam Software**.
+> “Veeam” and other Veeam marks are trademarks of Veeam Software. This repository uses publicly documented product APIs and makes no claim to any Veeam intellectual property.
+>
+> **Security note:** Do not use this project against production systems unless you have reviewed the code and your security team has approved it. Do not upload logs, screenshots, or configuration files that contain credentials or customer data.
+
 A Next.js 15 application providing a unified monitoring dashboard for Veeam Data Protection products through an intuitive web interface.
 
 ![Veeam Single-UI Walkthrough](https://jorgedelacruz.uk/wp-content/uploads/2026/01/ezgif-668cdc4ebc95a18c.gif)
@@ -403,12 +414,33 @@ See [CONTAINER.md](./CONTAINER.md) for detailed instructions on building and run
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Theme**: [next-themes](https://github.com/pacocoursey/next-themes)
 
+## Compatibility
+
+This project currently supports:
+- Veeam Backup and Replication REST API (v1.3-rev1)
+- Veeam Backup for Microsoft 365 REST API (v8)
+- Veeam ONE REST API (v12.3)
+- Veeam Recovery Orchestrator REST API (v7.21)
+
 ## Documentation
 
 ### Veeam Product Documentation
 - [Veeam Backup & Replication REST API](https://helpcenter.veeam.com/docs/backup/vbr_rest/)
 - [Veeam Recovery Orchestrator REST API](https://helpcenter.veeam.com/references/vro/)
 - [Veeam Backup for Microsoft 365 REST API](https://helpcenter.veeam.com/docs/vbo365/rest/)
+
+## Support
+
+This project is provided on a best-effort basis via GitHub issues only. It is not supported by Veeam Support.
+
+## Trademarks
+
+Veeam and related marks are trademarks of Veeam Software. This project is independent and not affiliated with, endorsed by, or sponsored by Veeam Software.
+
+## Data handling
+
+Credentials are stored locally (encrypted) by the application. You are responsible for reviewing whether this meets your security requirements.
+
 
 ### Application Documentation
 - [Container Deployment Guide](./CONTAINER.md)
