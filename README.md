@@ -414,6 +414,14 @@ See [CONTAINER.md](./CONTAINER.md) for detailed instructions on building and run
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Theme**: [next-themes](https://github.com/pacocoursey/next-themes)
 
+## Compatibility
+
+This project currently supports:
+- Veeam Backup and Replication REST API (v1.3-rev1)
+- Veeam Backup for Microsoft 365 REST API (v8)
+- Veeam ONE REST API (v12.3)
+- Veeam Recovery Orchestrator REST API (v7.21)
+
 ## Documentation
 
 ### Veeam Product Documentation
@@ -427,7 +435,7 @@ This project is provided on a best-effort basis via GitHub issues only. It is no
 
 ## Trademarks
 
-Veeam and the Veeam logo are trademarks of Veeam Software. No trademark rights are granted by this repository.
+Veeam and related marks are trademarks of Veeam Software. This project is independent and not affiliated with, endorsed by, or sponsored by Veeam Software.
 
 ## Data handling
 
